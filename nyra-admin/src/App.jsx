@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 
-const BASE_URL = "http://127.0.0.1:8000";
+const BASE_URL = "https://seva-mitra.onrender.com";
 
 const EMPTY_FORM = {
   name: "", category: "Electrician", phone: "",
