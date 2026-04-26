@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 
-const BASE_URL = "";
+const BASE_URL = "https://seva-mitra.onrender.com";
 
 // Inject fonts & global styles
 const fontLink = document.createElement("link");
