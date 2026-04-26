@@ -7,6 +7,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from contextlib import contextmanager
 from twilio.rest import Client
 from fastapi.responses import FileResponse  # <-- ADDED FOR FRONTEND
+import os
 
 # --- 1. Setup & Folders ---
 UPLOAD_DIR = "uploads"
@@ -19,9 +20,9 @@ Base = declarative_base()
 
 # --- 2. Twilio Configuration ---
 # Remember to put your real credentials here!
-TWILIO_ACCOUNT_SID = 'AC6ca42c757c57454bfcbb1b43173a1edc'
-TWILIO_AUTH_TOKEN = 'cd5b86889ad16f3cd04d44e9eacf8ab0'
-TWILIO_PHONE_NUMBER = '+1 707 353 4169' 
+account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
+twilio_number = os.environ.get("TWILIO_PHONE_NUMBER") 
 
 client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
