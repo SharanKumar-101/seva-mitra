@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./nyra_database.db"
+SQLALCHEMY_DATABASE_URL = "postgresql://neondb_owner:npg_qUHxzDrTI38S@ep-proud-frost-amhto55t.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
