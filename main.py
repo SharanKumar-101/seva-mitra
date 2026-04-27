@@ -1,13 +1,12 @@
 import os, shutil, uuid, datetime
-from fastapi import FastAPI, HTTPException, File, UploadFile, Form
+from fastapi import FastAPI, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, Column, Integer, String, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker
 from contextlib import contextmanager
 from twilio.rest import Client
-from fastapi.responses import FileResponse  # <-- ADDED FOR FRONTEND
-import os
+from fastapi.responses import FileResponse
 
 # --- 1. Setup & Folders ---
 UPLOAD_DIR = "uploads"
@@ -24,7 +23,7 @@ account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
 auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
 twilio_number = os.environ.get("TWILIO_PHONE_NUMBER") 
 
-client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+client = Client(account_sid, auth_token) if account_sid and auth_token else None
 
 # --- 3. DB Context Manager ---
 @contextmanager
@@ -94,12 +93,15 @@ def initiate_call(data: dict):
         raise HTTPException(status_code=400, detail="Missing phone numbers")
 
     try:
-        call = client.calls.create(
-            to=customer_phone,
-            from_=TWILIO_PHONE_NUMBER,
-            twiml=f'<Response><Say>Connecting you to Sevamitra Professional.</Say><Dial>{provider_phone}</Dial></Response>'
-        )
-        return {"msg": "Call initiated", "sid": call.sid}
+        if client:
+            call = client.calls.create(
+                to=customer_phone,
+                from_=twilio_number,
+                twiml=f'<Response><Say>Connecting you to Sevamitra Professional.</Say><Dial>{provider_phone}</Dial></Response>'
+            )
+            return {"msg": "Call initiated", "sid": call.sid}
+        else:
+            return {"msg": "Twilio not configured properly."}
     except Exception as e:
         print(f"Twilio Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -124,16 +126,12 @@ def create_provider(
     name: str = Form(...), category: str = Form(...), phone: str = Form(...),
     location: str = Form(...), experience: int = Form(...),
     rating: str = Form(...), base_price: int = Form(...),
-    file: UploadFile = File(...)
+    photo_url: str = Form(None)
 ):
-    ext = os.path.splitext(file.filename)[1]
-    fname = f"{uuid.uuid4()}{ext}"
-    with open(os.path.join(UPLOAD_DIR, fname), "wb") as f:
-        shutil.copyfileobj(file.file, f)
     with get_db() as db:
         db.add(Provider(
             name=name, category=category, phone=phone, location=location,
-            photo_url=f"/static/{fname}", experience=experience,
+            photo_url=photo_url, experience=experience,
             rating=rating, base_price=base_price
         ))
     return {"msg": "Provider created"}
@@ -144,7 +142,7 @@ def update_provider(
     name: str = Form(...), category: str = Form(...), phone: str = Form(...),
     location: str = Form(...), experience: int = Form(...),
     rating: str = Form(...), base_price: int = Form(...),
-    file: UploadFile = File(None)
+    photo_url: str = Form(None)
 ):
     with get_db() as db:
         provider = db.query(Provider).filter(Provider.id == provider_id).first()
@@ -155,15 +153,9 @@ def update_provider(
         provider.location, provider.experience, provider.rating = location, experience, rating
         provider.base_price = base_price
 
-        if file and file.filename:
-            if provider.photo_url:
-                old_path = os.path.join(UPLOAD_DIR, os.path.basename(provider.photo_url))
-                if os.path.exists(old_path): os.remove(old_path)
-            ext = os.path.splitext(file.filename)[1]
-            fname = f"{uuid.uuid4()}{ext}"
-            with open(os.path.join(UPLOAD_DIR, fname), "wb") as f:
-                shutil.copyfileobj(file.file, f)
-            provider.photo_url = f"/static/{fname}"
+        if photo_url:
+            provider.photo_url = photo_url
+            
     return {"msg": "Provider updated"}
 
 @app.delete("/providers/{provider_id}")
@@ -171,9 +163,11 @@ def delete_provider(provider_id: int):
     with get_db() as db:
         provider = db.query(Provider).filter(Provider.id == provider_id).first()
         if not provider: raise HTTPException(status_code=404, detail="Provider not found")
-        if provider.photo_url:
+        
+        if provider.photo_url and provider.photo_url.startswith("/static/"):
             old_path = os.path.join(UPLOAD_DIR, os.path.basename(provider.photo_url))
             if os.path.exists(old_path): os.remove(old_path)
+            
         db.delete(provider)
     return {"msg": "Provider deleted"}
 
@@ -213,8 +207,7 @@ def cancel_booking(booking_id: int, reason_data: dict):
         booking.cancel_reason = reason_data.get("reason", "Not specified")
     return {"msg": "Booking cancelled"}
 
-
-# --- 7. SERVE FRONTEND (ADDED THIS SECTION) ---
+# --- 7. SERVE FRONTEND ---
 DIST_DIR = os.path.join(os.getcwd(), "nyra-frontend", "dist")
 
 if os.path.exists(DIST_DIR):
