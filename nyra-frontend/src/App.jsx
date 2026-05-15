@@ -96,8 +96,8 @@ function Badge({ status }) {
 function Spinner({ color = "#fff" }) {
   return (
     <div style={{
-      width:20, height:20, borderRadius:"50%",
-      border:`2.5px solid ${color}40`,
+      width:24, height:24, borderRadius:"50%",
+      border:`3px solid ${color}40`,
       borderTopColor: color,
       animation:"spin 0.7s linear infinite", display:"inline-block"
     }} />
@@ -177,10 +177,22 @@ function LoginScreen({ onLogin }) {
       justifyContent:"center", padding:24
     }}>
       <div className="fade-up" style={{ textAlign: "center", marginBottom:40 }}>
-        <h1 style={{ fontSize:38, fontWeight:800, letterSpacing:"-0.5px", marginBottom:8, color: "#fff" }}>
+        {/* APP LOGO GOES HERE - Place 'logo.png' in your project root/public folder */}
+        <img 
+          src="/logo.png" 
+          alt="Sevamitra" 
+          style={{ width: "160px", height: "auto", borderRadius: "16px", marginBottom: "16px", boxShadow: "0 12px 24px rgba(0,0,0,0.15)" }} 
+          onError={(e) => {
+            // Fallback just in case the image fails to load
+            e.target.style.display = 'none';
+            e.target.nextSibling.style.display = 'block';
+          }}
+        />
+        <h1 style={{ display: "none", fontSize:38, fontWeight:800, letterSpacing:"-0.5px", marginBottom:8, color: "#fff" }}>
           Sevamitra.
         </h1>
-        <p style={{ color: BRAND.primaryLight, fontSize:15, fontWeight:500, lineHeight: 1.5 }}>
+        
+        <p style={{ color: BRAND.primaryLight, fontSize:15, fontWeight:500, lineHeight: 1.5, marginTop: 12 }}>
           Mysuru's verified service experts,<br/>on demand.
         </p>
       </div>
@@ -243,6 +255,7 @@ export default function App() {
   const [cancelReason, setCancelReason] = useState("");
   const [showQR,       setShowQR]       = useState(false); 
   const [qrBooking,    setQrBooking]    = useState(null);
+  const [payState,     setPayState]     = useState("idle"); // Wizard of Oz Demo State
 
   useEffect(() => {
     const saved = localStorage.getItem("sevamitra_user");
@@ -259,7 +272,7 @@ export default function App() {
       ]);
       setProviders(p); setBookings(b);
     } catch {
-      // Catch errors silently for demo
+      // Catch errors silently for demo purposes to avoid crashing on stage
     } finally {
       setIsLoading(false);
     }
@@ -274,7 +287,7 @@ export default function App() {
     setCallState("calling");
     setCallError("");
 
-    // Automatically format numbers for Twilio (adds +91 if missing)
+    // Automatically format numbers for Twilio API (+91 added safely)
     const formattedCustomer = user.phone.startsWith("+91") ? user.phone : `+91${user.phone}`;
     const formattedProvider = selProv.phone.startsWith("+91") ? selProv.phone : `+91${selProv.phone}`;
 
@@ -694,10 +707,10 @@ export default function App() {
             )}
           </div>
 
-          {/* ── DEMO PAYMENT UI FALLBACK ── */}
+          {/* ── DEMO PAYMENT UI TRIGGER ── */}
           {b.status === "Completed" && (
             <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px dashed ${BRAND.border}` }}>
-              <button onClick={() => { setQrBooking(b); setShowQR(true); }} className="tap" style={{
+              <button onClick={() => { setQrBooking(b); setShowQR(true); setPayState("idle"); }} className="tap" style={{
                 width: "100%", background: BRAND.primary, color: "#fff",
                 border: "none", borderRadius: 10, padding: "14px",
                 fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
@@ -755,7 +768,7 @@ export default function App() {
       </div>
     )}
 
-    {/* ── PROFESSIONAL DEMO QR MODAL ── */}
+    {/* ── PROFESSIONAL DEMO QR MODAL WITH SECRET ADMIN APPROVAL ── */}
     {showQR && (
       <div className="fade-in" style={{
         position:"fixed", inset:0, background:"rgba(15,23,42,0.7)",
@@ -767,27 +780,67 @@ export default function App() {
           padding:"32px 24px", width:"100%", maxWidth:320, textAlign: "center",
           boxShadow: "0 24px 48px rgba(0,0,0,0.2)"
         }}>
-          {/* Professional Demo/Test Badge */}
-          <div style={{ display: "inline-block", background: "#fef3c7", color: "#b45309", fontSize: 10, fontWeight: 800, padding: "4px 10px", borderRadius: 8, marginBottom: 16, letterSpacing: "0.5px" }}>
-            DEMO GATEWAY
-          </div>
           
-          <h3 style={{ fontSize:20, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Pay {qrBooking?.worker_name}</h3>
-          <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:24 }}>
-            Scan to securely transfer platform fee and base charges.
-          </p>
-          
-          <div style={{ background: BRAND.bg, padding: 16, borderRadius: 16, border: `1.5px solid ${BRAND.border}`, marginBottom: 24, display: "inline-block" }}>
-            {/* Dynamic Placeholder QR - Shows the worker name encoded in the URI visually */}
-            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=demo@ybl&pn=Sevamitra%20Demo%20(${encodeURIComponent(qrBooking?.worker_name)})`} 
-                 alt="Demo Payment QR" 
-                 style={{ width: 160, height: 160, borderRadius: 8 }} />
-          </div>
-          
-          <button onClick={() => setShowQR(false)} className="tap" style={{
-            width: "100%", padding:"16px", borderRadius: 12, border:`1.5px solid ${BRAND.border}`,
-            background:"#fff", color:BRAND.dark, fontSize:15, fontWeight:700
-          }}>Close Demo</button>
+          {/* DEFAULT STATE: Show QR Code */}
+          {payState === "idle" && (
+            <>
+              {/* SECRET ADMIN BUTTON: Click this badge to trigger the fake success */}
+              <button onClick={() => {
+                setPayState("loading");
+                setTimeout(() => setPayState("success"), 2000); // 2 second fake delay
+              }} style={{ 
+                display: "inline-block", background: "#fef3c7", color: "#b45309", 
+                fontSize: 10, fontWeight: 800, padding: "6px 12px", borderRadius: 8, 
+                marginBottom: 16, letterSpacing: "0.5px", border: "none", cursor: "pointer" 
+              }}>
+                DEMO GATEWAY
+              </button>
+              
+              <h3 style={{ fontSize:20, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Pay {qrBooking?.worker_name}</h3>
+              <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:24 }}>
+                Scan to securely transfer platform fee and base charges.
+              </p>
+              
+              <div style={{ background: BRAND.bg, padding: 16, borderRadius: 16, border: `1.5px solid ${BRAND.border}`, marginBottom: 24, display: "inline-block" }}>
+                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=demo@ybl&pn=Sevamitra%20Demo%20(${encodeURIComponent(qrBooking?.worker_name)})`} 
+                     alt="Demo Payment QR" 
+                     style={{ width: 160, height: 160, borderRadius: 8 }} />
+              </div>
+              
+              <button onClick={() => setShowQR(false)} className="tap" style={{
+                width: "100%", padding:"16px", borderRadius: 12, border:`1.5px solid ${BRAND.border}`,
+                background:"#fff", color:BRAND.dark, fontSize:15, fontWeight:700
+              }}>Close Demo</button>
+            </>
+          )}
+
+          {/* LOADING STATE: Faking the Bank Verification */}
+          {payState === "loading" && (
+            <div className="fade-in" style={{ padding: "40px 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <Spinner color={BRAND.primary} />
+              <p style={{ marginTop: 24, fontSize: 16, fontWeight: 700, color: BRAND.dark }}>Verifying Payment...</p>
+              <p style={{ marginTop: 6, fontSize: 13, color: BRAND.subtle, fontWeight: 500 }}>Awaiting bank confirmation.</p>
+            </div>
+          )}
+
+          {/* SUCCESS STATE: Payment Approved */}
+          {payState === "success" && (
+            <div className="fade-up" style={{ padding: "20px 0" }}>
+              <div style={{ color: "#10b981", marginBottom: 16, display: "flex", justifyContent: "center" }}>
+                <Icons.CheckCircle />
+              </div>
+              <h3 style={{ fontSize:22, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Payment Successful!</h3>
+              <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:24, lineHeight: 1.5 }}>
+                Funds have been securely routed to {qrBooking?.worker_name} and the Sevamitra platform.
+              </p>
+              <button onClick={() => setShowQR(false)} className="tap" style={{
+                width: "100%", padding:"16px", borderRadius: 12, border:"none",
+                background:BRAND.primary, color:"#fff", fontSize:15, fontWeight:800,
+                boxShadow: `0 8px 20px ${BRAND.primary}40`
+              }}>Done</button>
+            </div>
+          )}
+
         </div>
       </div>
     )}
