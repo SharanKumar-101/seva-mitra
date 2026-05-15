@@ -167,7 +167,7 @@ function LoginScreen({ onLogin }) {
     width:"100%", padding:"16px", borderRadius: 12,
     border:`1px solid ${BRAND.border}`, background:"#fff",
     fontSize:15, fontWeight:500, color: BRAND.dark,
-    outline:"none", marginBottom:14, transition:"border-color 0.2s",
+    outline:"none", transition:"border-color 0.2s",
   };
 
   return (
@@ -191,13 +191,24 @@ function LoginScreen({ onLogin }) {
             {error}
           </div>
         )}
-        <input style={inp} placeholder="Full Name" value={name} onChange={e => setName(e.target.value)}
+        
+        <input style={{...inp, marginBottom: 16}} placeholder="Full Name" value={name} onChange={e => setName(e.target.value)}
           onFocus={e => e.target.style.borderColor=BRAND.primary}
           onBlur={e  => e.target.style.borderColor=BRAND.border} />
-        <input style={{...inp, marginBottom:28}} placeholder="10-Digit Mobile Number" type="tel" maxLength={10}
-          value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, ""))}
-          onFocus={e => e.target.style.borderColor=BRAND.primary}
-          onBlur={e  => e.target.style.borderColor=BRAND.border} />
+          
+        {/* Professional +91 Locked Input */}
+        <div style={{ display: "flex", gap: 10, marginBottom: 28 }}>
+          <div style={{ 
+            ...inp, width: "auto", marginBottom: 0, background: "#f1f5f9", 
+            color: BRAND.subtle, display: "flex", alignItems: "center", fontWeight: 700 
+          }}>
+            +91
+          </div>
+          <input style={{...inp, flex: 1, marginBottom: 0}} placeholder="Mobile Number" type="tel" maxLength={10}
+            value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, ""))}
+            onFocus={e => e.target.style.borderColor=BRAND.primary}
+            onBlur={e  => e.target.style.borderColor=BRAND.border} />
+        </div>
 
         <button onClick={handleStart} className="tap"
           style={{
@@ -262,13 +273,18 @@ export default function App() {
   const handleCall = async () => {
     setCallState("calling");
     setCallError("");
+
+    // Automatically format numbers for Twilio (adds +91 if missing)
+    const formattedCustomer = user.phone.startsWith("+91") ? user.phone : `+91${user.phone}`;
+    const formattedProvider = selProv.phone.startsWith("+91") ? selProv.phone : `+91${selProv.phone}`;
+
     try {
       const res = await fetch(`${BASE_URL}/initiate-call/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customer_phone: user.phone,
-          provider_phone: selProv.phone,
+          customer_phone: formattedCustomer,
+          provider_phone: formattedProvider,
         }),
       });
       if (res.ok) {
