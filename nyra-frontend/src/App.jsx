@@ -11,7 +11,7 @@ document.head.appendChild(fontLink);
 const styleEl = document.createElement("style");
 styleEl.textContent = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; background: #f8fafc; font-family: 'Plus Jakarta Sans', sans-serif; -webkit-font-smoothing: antialiased; }
+  html, body { height: 100%; background: #f4f7f9; font-family: 'Plus Jakarta Sans', sans-serif; -webkit-font-smoothing: antialiased; }
   ::-webkit-scrollbar { display: none; }
   input, button { font-family: 'Plus Jakarta Sans', sans-serif; }
 
@@ -34,8 +34,16 @@ styleEl.textContent = `
 `;
 document.head.appendChild(styleEl);
 
-// ── Theme Colors & Icons ─────────────────────────────────────────────────────
-const BRAND = { primary: "#4f46e5", dark: "#0f172a", text: "#334155", subtle: "#64748b", border: "#e2e8f0", bg: "#f8fafc" };
+// ── Professional "Trust Blue" Theme ──────────────────────────────────────────
+const BRAND = { 
+  primary: "#2563eb",       // Vibrant Blue
+  primaryDark: "#1e3a8a",   // Deep Navy Blue for headers
+  primaryLight: "#eff6ff",  // Soft Blue for icon backgrounds
+  dark: "#0f172a",          // Near black for text
+  subtle: "#64748b",        // Slate grey for secondary text
+  border: "#e2e8f0",        // Light grey for borders
+  bg: "#f4f7f9"             // Off-white app background
+};
 
 const Icons = {
   Electrician: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
@@ -76,7 +84,7 @@ function Badge({ status }) {
   const ok = status === "Confirmed" || status === "Completed";
   return (
     <span style={{
-      fontSize: 11, fontWeight: 600, letterSpacing: 0.3,
+      fontSize: 11, fontWeight: 700, letterSpacing: 0.3,
       padding: "4px 10px", borderRadius: 6,
       background: ok ? "#f0fdf4" : "#fef2f2",
       color: ok ? "#166534" : "#991b1b",
@@ -111,7 +119,7 @@ function BottomNav({ tab, onSwitch }) {
       position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)",
       width:"100%", maxWidth:430,
       background:"rgba(255,255,255,0.95)", backdropFilter:"blur(12px)",
-      borderTop:"1px solid #f1f5f9",
+      borderTop:`1px solid ${BRAND.border}`,
       display:"flex", justifyContent:"space-around",
       padding:"12px 0 20px", zIndex:50,
     }}>
@@ -126,7 +134,7 @@ function BottomNav({ tab, onSwitch }) {
             position: "relative"
           }}>
             <IconComponent />
-            <span style={{ fontSize:11, fontWeight: active ? 600 : 500 }}>{it.label}</span>
+            <span style={{ fontSize:11, fontWeight: active ? 700 : 500 }}>{it.label}</span>
             {active && (
               <div style={{ position: "absolute", bottom: -6, width: 4, height: 4, borderRadius: "50%", background: BRAND.primary }} />
             )}
@@ -145,59 +153,57 @@ function LoginScreen({ onLogin }) {
   const [shake, setShake] = useState(false);
 
   const handleStart = () => {
-    if (name.trim().length < 2 || phone.replace(/\\D/g, "").length !== 10) {
+    if (name.trim().length < 2 || phone.replace(/\D/g, "").length !== 10) {
       setError("Please enter a valid name and 10-digit number.");
       setShake(true);
       setTimeout(() => setShake(false), 400);
       return;
     }
     setError("");
-    onLogin({ name: name.trim(), phone: phone.replace(/\\D/g, "") });
+    onLogin({ name: name.trim(), phone: phone.replace(/\D/g, "") });
   };
 
   const inp = {
     width:"100%", padding:"16px", borderRadius: 12,
-    border:"1px solid #e2e8f0", background:"#fff",
+    border:`1px solid ${BRAND.border}`, background:"#fff",
     fontSize:15, fontWeight:500, color: BRAND.dark,
     outline:"none", marginBottom:14, transition:"border-color 0.2s",
-    boxShadow: "0 1px 2px rgba(0,0,0,0.02)"
   };
 
   return (
     <div style={{
-      minHeight:"100vh", background: BRAND.bg,
+      minHeight:"100vh", background: `linear-gradient(135deg, ${BRAND.primaryDark} 0%, ${BRAND.primary} 100%)`,
       display:"flex", flexDirection:"column",
-      justifyContent:"center", padding:32
+      justifyContent:"center", padding:24
     }}>
-      <div className="fade-up" style={{ marginBottom:48 }}>
-        {/* Fixed gradient issue: Flat professional wordmark */}
-        <h1 style={{ fontSize:32, fontWeight:800, letterSpacing:"-0.5px", marginBottom:8, color: BRAND.dark }}>
+      <div className="fade-up" style={{ textAlign: "center", marginBottom:40 }}>
+        <h1 style={{ fontSize:38, fontWeight:800, letterSpacing:"-0.5px", marginBottom:8, color: "#fff" }}>
           Sevamitra.
         </h1>
-        <p style={{ color: BRAND.subtle, fontSize:15, fontWeight:500, lineHeight: 1.5 }}>
+        <p style={{ color: BRAND.primaryLight, fontSize:15, fontWeight:500, lineHeight: 1.5 }}>
           Mysuru's verified service experts,<br/>on demand.
         </p>
       </div>
 
-      <div className={`fade-up ${shake ? "shake" : ""}`} style={{ animationDelay: "0.1s" }}>
+      <div className={`fade-up ${shake ? "shake" : ""}`} style={{ animationDelay: "0.1s", background: "#fff", padding: 28, borderRadius: 24, boxShadow: "0 24px 48px rgba(0,0,0,0.2)" }}>
         {error && (
-          <div style={{ color: "#dc2626", fontSize: 13, fontWeight: 500, marginBottom: 12, background: "#fef2f2", padding: "10px 12px", borderRadius: 8, border: "1px solid #fecaca" }}>
+          <div style={{ color: "#dc2626", fontSize: 13, fontWeight: 600, marginBottom: 16, background: "#fef2f2", padding: "12px", borderRadius: 8, border: "1px solid #fecaca" }}>
             {error}
           </div>
         )}
         <input style={inp} placeholder="Full Name" value={name} onChange={e => setName(e.target.value)}
           onFocus={e => e.target.style.borderColor=BRAND.primary}
-          onBlur={e  => e.target.style.borderColor="#e2e8f0"} />
-        <input style={{...inp, marginBottom:32}} placeholder="10-Digit Mobile Number" type="tel" maxLength={10}
-          value={phone} onChange={e => setPhone(e.target.value.replace(/\\D/g, ""))}
+          onBlur={e  => e.target.style.borderColor=BRAND.border} />
+        <input style={{...inp, marginBottom:28}} placeholder="10-Digit Mobile Number" type="tel" maxLength={10}
+          value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, ""))}
           onFocus={e => e.target.style.borderColor=BRAND.primary}
-          onBlur={e  => e.target.style.borderColor="#e2e8f0"} />
+          onBlur={e  => e.target.style.borderColor=BRAND.border} />
 
         <button onClick={handleStart} className="tap"
           style={{
             width:"100%", padding:"16px", borderRadius: 12, border:"none",
-            background: BRAND.dark, color:"#fff", fontSize:15, fontWeight:600,
-            boxShadow:"0 4px 12px rgba(15, 23, 42, 0.15)"
+            background: BRAND.primary, color:"#fff", fontSize:15, fontWeight:700,
+            boxShadow:`0 8px 20px ${BRAND.primary}40`
           }}>
           Get Started
         </button>
@@ -216,7 +222,7 @@ export default function App() {
   const [screen,       setScreen]       = useState("home");
   const [providers,    setProviders]    = useState([]);
   const [bookings,     setBookings]     = useState([]);
-  const [isLoading,    setIsLoading]    = useState(true); // Added loading state
+  const [isLoading,    setIsLoading]    = useState(true); 
   const [selCat,       setSelCat]       = useState(null);
   const [selProv,      setSelProv]      = useState(null);
   const [callState,    setCallState]    = useState("idle"); 
@@ -242,7 +248,7 @@ export default function App() {
       ]);
       setProviders(p); setBookings(b);
     } catch {
-      // Handle network errors gracefully here if needed
+      // Catch errors silently for demo
     } finally {
       setIsLoading(false);
     }
@@ -323,7 +329,7 @@ export default function App() {
       minHeight:"100vh", background: BRAND.bg,
       display:"flex", flexDirection:"column",
       maxWidth:430, margin:"0 auto", position:"relative",
-      boxShadow:"0 0 40px rgba(0,0,0,0.05)"
+      boxShadow:"0 0 40px rgba(0,0,0,0.08)"
     }}>
       {children}
       <BottomNav tab={tab} onSwitch={switchTab} />
@@ -335,9 +341,9 @@ export default function App() {
   if (tab === "home") {
 
     if (screen === "home") return shell(<>
-      <div style={{ background: "#ffffff", padding: "40px 24px 20px", borderBottom: `1px solid ${BRAND.border}` }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: BRAND.dark, letterSpacing: "-0.5px" }}>Sevamitra.</h1>
-        <p style={{ color: BRAND.subtle, fontSize: 14, marginTop: 4, fontWeight: 500 }}>
+      <div style={{ background: `linear-gradient(135deg, ${BRAND.primaryDark} 0%, ${BRAND.primary} 100%)`, padding: "48px 24px 32px", borderRadius: "0 0 24px 24px", color: "#fff", boxShadow: "0 12px 24px rgba(37, 99, 235, 0.15)" }}>
+        <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.5px" }}>Sevamitra.</h1>
+        <p style={{ color: BRAND.primaryLight, fontSize: 14, marginTop: 4, fontWeight: 500 }}>
           Welcome back, {user.name.split(" ")[0]}
         </p>
       </div>
@@ -345,20 +351,21 @@ export default function App() {
       <div style={{ flex:1, overflowY:"auto", padding:"24px 20px 100px" }}>
         
         {/* Metric Cards */}
-        <div style={{ display:"flex", gap:12, marginBottom:28 }}>
+        <div style={{ display:"flex", gap:12, marginBottom:28, marginTop: -12 }}>
           {[
             { label:"Active", value: myBookings.filter(b=>b.status==="Confirmed").length, highlight: true },
             { label:"Experts", value: providers.length, highlight: false },
           ].map((s, i) => (
             <div key={s.label} className="fade-up" style={{
-              flex:1, background: s.highlight ? BRAND.dark : "#ffffff", 
-              borderRadius: 12, padding: "16px",
+              flex:1, background: s.highlight ? BRAND.primary : "#ffffff", 
+              borderRadius: 16, padding: "18px 20px",
               border: s.highlight ? "none" : `1px solid ${BRAND.border}`,
+              boxShadow: s.highlight ? `0 8px 20px ${BRAND.primary}40` : "0 2px 8px rgba(0,0,0,0.04)"
             }}>
-              {isLoading ? <Skeleton width="40px" height="28px" style={{ marginBottom: 4 }} /> : 
-                <div style={{ fontSize: 24, fontWeight: 800, color: s.highlight ? "#fff" : BRAND.dark }}>{s.value}</div>
+              {isLoading ? <Skeleton width="40px" height="28px" style={{ marginBottom: 4, background: s.highlight ? `${BRAND.primaryDark}80` : BRAND.border }} /> : 
+                <div style={{ fontSize: 26, fontWeight: 800, color: s.highlight ? "#fff" : BRAND.dark }}>{s.value}</div>
               }
-              <div style={{ fontSize: 12, color: s.highlight ? "#94a3b8" : BRAND.subtle, fontWeight: 500, marginTop: 4 }}>{s.label}</div>
+              <div style={{ fontSize: 12, color: s.highlight ? BRAND.primaryLight : BRAND.subtle, fontWeight: 600, marginTop: 4 }}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -373,22 +380,22 @@ export default function App() {
                 className="tap fade-up"
                 style={{
                   background:"#fff", border:`1px solid ${BRAND.border}`,
-                  borderRadius: 12, padding:"16px",
+                  borderRadius: 16, padding:"20px 16px",
                   display:"flex", flexDirection:"column", alignItems:"center",
-                  boxShadow:"0 1px 3px rgba(0,0,0,0.02)",
+                  boxShadow:"0 2px 6px rgba(0,0,0,0.02)",
                   animationDelay:`${i*0.04}s`
                 }}>
                 <div style={{
-                  width: 48, height: 48, borderRadius: 12,
-                  background: "#f1f5f9", color: BRAND.subtle,
+                  width: 52, height: 52, borderRadius: 14,
+                  background: BRAND.primaryLight, color: BRAND.primary,
                   display:"flex", alignItems:"center", justifyContent:"center",
-                  marginBottom: 12, transition: "color 0.2s"
+                  marginBottom: 12
                 }}>
                   <IconComponent />
                 </div>
-                <span style={{ fontSize: 14, fontWeight: 600, color: BRAND.dark, textAlign: "center" }}>{c}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: BRAND.dark, textAlign: "center" }}>{c}</span>
                 {isLoading ? <Skeleton width="60px" height="12px" style={{ marginTop: 6 }} /> : 
-                  <span style={{ fontSize: 11, color: BRAND.subtle, marginTop: 4, fontWeight: 500 }}>
+                  <span style={{ fontSize: 11, color: BRAND.subtle, marginTop: 6, fontWeight: 600 }}>
                     {providers.filter(p=>p.category===c).length} available
                   </span>
                 }
@@ -402,7 +409,7 @@ export default function App() {
     // Provider List
     if (screen === "list") return shell(<>
       <div style={{ background:"#fff", padding:"40px 20px 16px", borderBottom:`1px solid ${BRAND.border}`, display: "flex", alignItems: "center", gap: 16 }}>
-        <button onClick={() => goBack("home")} className="tap" style={{ background:"#f1f5f9", border:"none", width: 36, height: 36, borderRadius: 18, display:"flex", alignItems:"center", justifyContent:"center", color:BRAND.dark }}>
+        <button onClick={() => goBack("home")} className="tap" style={{ background:BRAND.primaryLight, border:"none", width: 36, height: 36, borderRadius: 18, display:"flex", alignItems:"center", justifyContent:"center", color:BRAND.primary }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
         </button>
         <div>
@@ -417,8 +424,8 @@ export default function App() {
         {isLoading ? (
            <>
              {[1, 2, 3].map(i => (
-               <div key={i} style={{ background:"#fff", borderRadius: 12, padding: 16, marginBottom: 12, border:`1px solid ${BRAND.border}`, display:"flex", gap:16 }}>
-                 <Skeleton width="56px" height="56px" borderRadius="10px" />
+               <div key={i} style={{ background:"#fff", borderRadius: 16, padding: 16, marginBottom: 12, border:`1px solid ${BRAND.border}`, display:"flex", gap:16 }}>
+                 <Skeleton width="60px" height="60px" borderRadius="12px" />
                  <div style={{ flex: 1, display:"flex", flexDirection:"column", justifyContent:"center", gap: 8 }}>
                    <Skeleton width="60%" height="16px" />
                    <Skeleton width="40%" height="12px" />
@@ -428,38 +435,39 @@ export default function App() {
            </>
         ) : catProviders.length === 0 ? (
           <div style={{ textAlign:"center", paddingTop:60, color:BRAND.subtle }}>
-            <div style={{ fontWeight:600, fontSize:15, color: BRAND.dark }}>No experts available</div>
-            <div style={{ fontSize:13, marginTop:6 }}>Check back later</div>
+            <div style={{ fontWeight:700, fontSize:16, color: BRAND.dark }}>No experts available</div>
+            <div style={{ fontSize:14, marginTop:6 }}>Check back later</div>
           </div>
         ) : catProviders.map((p, i) => (
           <div key={p.id} className="fade-up"
             style={{
-              background:"#fff", borderRadius: 12, padding: 16, marginBottom: 12,
+              background:"#fff", borderRadius: 16, padding: 16, marginBottom: 12,
               display:"flex", alignItems:"center", gap: 16,
-              border:`1px solid ${BRAND.border}`,
+              border:`1px solid ${BRAND.border}`, boxShadow:"0 2px 8px rgba(0,0,0,0.02)",
               animationDelay:`${i*0.04}s`
             }}>
             <img src={p.photo_url} alt={p.name}
-              onError={e => { e.target.onerror=null; e.target.src=`https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=f1f5f9&color=0f172a&bold=true`; }}
-              style={{ width:56, height:56, borderRadius: 10, objectFit:"cover", flexShrink:0, background: BRAND.bg }}
+              onError={e => { e.target.onerror=null; e.target.src=`https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=eff6ff&color=2563eb&bold=true`; }}
+              style={{ width:60, height:60, borderRadius: 12, objectFit:"cover", flexShrink:0, background: BRAND.bg }}
             />
             <div style={{ flex:1 }}>
-              <div style={{ fontWeight:600, color:BRAND.dark, fontSize:15, marginBottom:4 }}>{p.name}</div>
+              <div style={{ fontWeight:700, color:BRAND.dark, fontSize:15, marginBottom:4 }}>{p.name}</div>
               <div style={{ display: "flex", gap: 4, alignItems: "center", color: BRAND.subtle, fontSize: 12, marginBottom: 8, fontWeight: 500 }}>
                 <Icons.MapPin /> {p.location}
               </div>
               <div style={{ display:"flex", gap: 8, alignItems: "center" }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 4, background:"#f1f5f9", color:BRAND.dark, borderRadius: 6, fontSize: 11, fontWeight:600, padding:"4px 8px" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 4, background:BRAND.primaryLight, color:BRAND.primary, borderRadius: 6, fontSize: 11, fontWeight:700, padding:"4px 8px" }}>
                   <Icons.Star /> {p.rating}
                 </span>
-                <span style={{ color:BRAND.subtle, fontSize: 11, fontWeight: 500 }}>₹{p.base_price} base</span>
+                <span style={{ color:BRAND.subtle, fontSize: 11, fontWeight: 600 }}>₹{p.base_price} base</span>
               </div>
             </div>
             <button onClick={() => { setSelProv(p); setCallState("idle"); setCallError(""); setScreen("profile"); }}
               className="tap"
               style={{
-                background: BRAND.dark, color:"#fff", border:"none", borderRadius: 8,
-                padding:"8px 14px", fontSize: 13, fontWeight: 600, flexShrink:0,
+                background: BRAND.primary, color:"#fff", border:"none", borderRadius: 10,
+                padding:"10px 16px", fontSize: 13, fontWeight: 700, flexShrink:0,
+                boxShadow:`0 4px 12px ${BRAND.primary}40`
               }}>Select</button>
           </div>
         ))}
@@ -471,20 +479,20 @@ export default function App() {
       return shell(<>
         <div style={{ background: "#fff", borderBottom: `1px solid ${BRAND.border}` }}>
           <div style={{ padding: "40px 20px 16px", display: "flex", alignItems: "center", gap: 16 }}>
-             <button onClick={() => goBack("list")} className="tap" style={{ background:"#f1f5f9", border:"none", width: 36, height: 36, borderRadius: 18, display:"flex", alignItems:"center", justifyContent:"center", color:BRAND.dark }}>
+             <button onClick={() => goBack("list")} className="tap" style={{ background:BRAND.primaryLight, border:"none", width: 36, height: 36, borderRadius: 18, display:"flex", alignItems:"center", justifyContent:"center", color:BRAND.primary }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
             </button>
           </div>
           
           <div style={{ padding: "0 24px 24px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
             <img src={selProv.photo_url} alt={selProv.name}
-              onError={e => { e.target.onerror=null; e.target.src=`https://ui-avatars.com/api/?name=${encodeURIComponent(selProv.name)}&background=f1f5f9&color=0f172a&bold=true&size=128`; }}
-              style={{ width:88, height:88, borderRadius: 20, objectFit:"cover", marginBottom: 16 }}
+              onError={e => { e.target.onerror=null; e.target.src=`https://ui-avatars.com/api/?name=${encodeURIComponent(selProv.name)}&background=eff6ff&color=2563eb&bold=true&size=128`; }}
+              style={{ width:96, height:96, borderRadius: 24, objectFit:"cover", marginBottom: 16, boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}
             />
-            <h2 style={{ fontSize:20, fontWeight:700, color:BRAND.dark, marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
-              {selProv.name} <svg width="18" height="18" viewBox="0 0 24 24" fill={BRAND.primary} stroke="#fff" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <h2 style={{ fontSize:22, fontWeight:800, color:BRAND.dark, marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+              {selProv.name} <svg width="20" height="20" viewBox="0 0 24 24" fill={BRAND.primary} stroke="#fff" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
             </h2>
-            <p style={{ color: BRAND.subtle, fontSize:13, fontWeight:500, marginTop: 4 }}>
+            <p style={{ color: BRAND.primary, background: BRAND.primaryLight, padding: "4px 12px", borderRadius: 12, fontSize:13, fontWeight:700, marginTop: 4 }}>
               Verified {selProv.category}
             </p>
           </div>
@@ -499,17 +507,17 @@ export default function App() {
               { label:"Base Fee",   value:`₹${selProv.base_price}` },
             ].map(s => (
               <div key={s.label} style={{
-                background:"#fff", borderRadius: 12, padding:"16px 12px",
+                background:"#fff", borderRadius: 14, padding:"16px 12px",
                 textAlign:"center", border:`1px solid ${BRAND.border}`,
               }}>
-                <div style={{ fontSize:15, fontWeight:700, color:BRAND.dark, marginBottom:4 }}>{s.value}</div>
-                <div style={{ fontSize:11, color:BRAND.subtle, fontWeight:500 }}>{s.label}</div>
+                <div style={{ fontSize:15, fontWeight:800, color:BRAND.dark, marginBottom:4 }}>{s.value}</div>
+                <div style={{ fontSize:11, color:BRAND.subtle, fontWeight:600 }}>{s.label}</div>
               </div>
             ))}
           </div>
 
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: BRAND.dark, marginBottom: 16 }}>How it works</h3>
-          <div style={{ background:"#fff", borderRadius: 12, padding:20, border:`1px solid ${BRAND.border}`, marginBottom:24 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: BRAND.dark, marginBottom: 16 }}>How it works</h3>
+          <div style={{ background:"#fff", borderRadius: 16, padding:20, border:`1px solid ${BRAND.border}`, marginBottom:24 }}>
             {[
               "Tap call below — we secure your number.",
               "Discuss the issue and finalize pricing.",
@@ -517,8 +525,8 @@ export default function App() {
             ].map((s, i) => (
               <div key={i} style={{ display:"flex", gap:16, alignItems:"flex-start", marginBottom:i<2?16:0 }}>
                 <div style={{
-                  width:24, height:24, borderRadius:12, background:"#f1f5f9",
-                  color:BRAND.dark, fontSize:12, fontWeight:600,
+                  width:24, height:24, borderRadius:12, background:BRAND.primaryLight,
+                  color:BRAND.primary, fontSize:12, fontWeight:700,
                   display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0
                 }}>{i+1}</div>
                 <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, lineHeight:1.5 }}>{s}</p>
@@ -529,7 +537,7 @@ export default function App() {
           {callError && (
             <div style={{
               background:"#fef2f2", border:"1px solid #fecaca", borderRadius: 12,
-              padding:"12px 16px", marginBottom:20, fontSize:13, color:"#991b1b", fontWeight:500
+              padding:"12px 16px", marginBottom:20, fontSize:13, color:"#991b1b", fontWeight:600
             }}>
               {callError}
             </div>
@@ -537,10 +545,11 @@ export default function App() {
 
           {callState === "idle" && (
             <button onClick={handleCall} className="tap" style={{
-              width:"100%", background: BRAND.dark, color:"#fff",
-              border:"none", borderRadius: 12, padding:"16px",
-              fontSize:15, fontWeight:600,
+              width:"100%", background: BRAND.primary, color:"#fff",
+              border:"none", borderRadius: 14, padding:"16px",
+              fontSize:15, fontWeight:700,
               display:"flex", alignItems:"center", justifyContent:"center", gap:10,
+              boxShadow: `0 8px 20px ${BRAND.primary}40`
             }}>
               <Icons.Phone /> Secure Call
             </button>
@@ -548,11 +557,11 @@ export default function App() {
 
           {callState === "calling" && (
             <div style={{
-              width:"100%", background:"#f1f5f9", color: BRAND.dark,
-              borderRadius: 12, padding:"16px", fontSize:14, fontWeight:600,
+              width:"100%", background:BRAND.primaryLight, color: BRAND.primary,
+              borderRadius: 14, padding:"16px", fontSize:15, fontWeight:700,
               display:"flex", alignItems:"center", justifyContent:"center", gap:12,
             }}>
-              <Spinner color={BRAND.dark} /> Connecting...
+              <Spinner color={BRAND.primary} /> Connecting...
             </div>
           )}
 
@@ -560,24 +569,25 @@ export default function App() {
             <div className="fade-in" style={{ display:"flex", flexDirection:"column", gap:12 }}>
               <div style={{
                 background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius: 12,
-                padding:"16px", fontSize:14, color:"#166534", fontWeight:500,
+                padding:"16px", fontSize:14, color:"#166534", fontWeight:600,
                 display:"flex", alignItems:"center", gap:10
               }}>
                 <Icons.CheckCircle /> Connected! Please confirm below once agreed.
               </div>
 
               <button onClick={handleBook} disabled={callState==="booking"} className="tap" style={{
-                width:"100%", background: BRAND.dark,
-                color:"#fff", border:"none", borderRadius: 12, padding:"16px",
-                fontSize:15, fontWeight:600,
+                width:"100%", background: BRAND.primary,
+                color:"#fff", border:"none", borderRadius: 14, padding:"16px",
+                fontSize:15, fontWeight:700,
                 display:"flex", alignItems:"center", justifyContent:"center", gap:10,
+                boxShadow: `0 8px 20px ${BRAND.primary}40`
               }}>
                 {callState === "booking" ? <><Spinner /> Confirming</> : "Confirm Booking"}
               </button>
 
               <button onClick={handleCall} className="tap" style={{
-                background:"none", border:`1px solid ${BRAND.border}`, color:BRAND.text,
-                borderRadius: 12, padding:"14px", fontSize:14, fontWeight:600
+                background:"none", border:`1px solid ${BRAND.border}`, color:BRAND.subtle,
+                borderRadius: 14, padding:"14px", fontSize:14, fontWeight:600
               }}>
                 Call Again
               </button>
@@ -590,18 +600,19 @@ export default function App() {
     // Success
     if (screen === "success") return shell(
       <div className="fade-in" style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:32 }}>
-        <div style={{ marginBottom: 24 }}><Icons.CheckCircle /></div>
-        <h2 style={{ fontSize:24, fontWeight:700, color:BRAND.dark, marginBottom:8 }}>Confirmed</h2>
+        <div style={{ marginBottom: 24, color: "#10b981" }}><Icons.CheckCircle /></div>
+        <h2 style={{ fontSize:26, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Confirmed!</h2>
         <p style={{ color:BRAND.subtle, fontSize:15, fontWeight:500, textAlign:"center", marginBottom:40, lineHeight:1.6 }}>
           Your {selProv?.category?.toLowerCase()} has been booked securely.
         </p>
         <button onClick={() => switchTab("history")} className="tap" style={{
-          background: BRAND.dark, color:"#fff", border:"none", borderRadius: 12, padding:"16px 36px",
-          fontSize:15, fontWeight:600, width: "100%", marginBottom: 12,
+          background: BRAND.primary, color:"#fff", border:"none", borderRadius: 14, padding:"16px 36px",
+          fontSize:15, fontWeight:700, width: "100%", marginBottom: 12,
+          boxShadow: `0 8px 20px ${BRAND.primary}40`
         }}>View Bookings</button>
         <button onClick={() => switchTab("home")} style={{
           background:"none", border:"none", color:BRAND.subtle,
-          fontSize:14, fontWeight:500, cursor:"pointer", padding: "12px"
+          fontSize:14, fontWeight:600, cursor:"pointer", padding: "12px"
         }}>Return Home</button>
       </div>
     );
@@ -610,57 +621,58 @@ export default function App() {
   // ── HISTORY / BOOKINGS ────────────────────────────────────────────────────
   if (tab === "history") return shell(<>
     <div style={{ background:"#fff", padding:"40px 24px 20px", borderBottom:`1px solid ${BRAND.border}` }}>
-      <h2 style={{ fontSize: 24, fontWeight: 700, color: BRAND.dark }}>My Bookings</h2>
+      <h2 style={{ fontSize: 24, fontWeight: 800, color: BRAND.dark }}>My Bookings</h2>
     </div>
 
     <div style={{ flex:1, overflowY:"auto", padding:"24px 20px 100px" }}>
       {isLoading ? (
         <>
           {[1, 2].map(i => (
-             <div key={i} style={{ background:"#fff", borderRadius: 12, padding: 20, marginBottom: 16, border:`1px solid ${BRAND.border}` }}>
+             <div key={i} style={{ background:"#fff", borderRadius: 16, padding: 20, marginBottom: 16, border:`1px solid ${BRAND.border}` }}>
                <Skeleton width="40%" height="18px" style={{ marginBottom: 8 }} />
                <Skeleton width="25%" height="14px" style={{ marginBottom: 20 }} />
-               <Skeleton width="100%" height="36px" />
+               <Skeleton width="100%" height="40px" borderRadius="10px" />
              </div>
           ))}
         </>
       ) : myBookings.length === 0 ? (
         <div style={{ textAlign:"center", paddingTop:60, color:BRAND.subtle }}>
-          <div style={{ fontWeight:600, fontSize:16, color: BRAND.dark }}>No history yet</div>
+          <div style={{ fontWeight:700, fontSize:16, color: BRAND.dark }}>No history yet</div>
           <div style={{ fontSize:14, marginTop:6, fontWeight: 500 }}>Your past bookings will appear here</div>
         </div>
       ) : myBookings.map((b, i) => (
         <div key={b.id} className="fade-up"
           style={{
             background: "#fff",
-            border: `1px solid ${BRAND.border}`, 
-            borderRadius: 12, padding:20, marginBottom:16,
+            border: b.status==="Completed" ? "1.5px solid #bbf7d0" : `1px solid ${BRAND.border}`, 
+            borderRadius: 16, padding:20, marginBottom:16,
             opacity: b.status==="Cancelled" ? 0.6 : 1,
-            boxShadow:"0 1px 3px rgba(0,0,0,0.02)", animationDelay:`${i*0.04}s`
+            boxShadow:"0 2px 8px rgba(0,0,0,0.02)", animationDelay:`${i*0.04}s`
           }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16 }}>
             <div>
-              <p style={{ fontWeight:700, fontSize:15, color:BRAND.dark, marginBottom:4 }}>{b.worker_name}</p>
+              <p style={{ fontWeight:700, fontSize:16, color:BRAND.dark, marginBottom:6 }}>{b.worker_name}</p>
               <span style={{ 
-                color: BRAND.subtle, fontSize:13, fontWeight:500 
+                background: BRAND.primaryLight, color: BRAND.primary,
+                padding: "4px 10px", borderRadius: 8, fontSize:12, fontWeight:700 
               }}>{b.category}</span>
             </div>
             <Badge status={b.status} />
           </div>
           
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <p style={{ fontSize:13, color:BRAND.subtle, fontWeight:500 }}>
+            <p style={{ fontSize:13, color:BRAND.subtle, fontWeight:600 }}>
               {new Date(b.time).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}
             </p>
             {b.status === "Confirmed" && (
-               <div style={{ display: "flex", gap: 10 }}>
+               <div style={{ display: "flex", gap: 8 }}>
                  <button onClick={() => handleComplete(b.id)} className="tap" style={{
-                   background:"#f1f5f9", border:"none", color:BRAND.dark, 
-                   borderRadius: 8, padding:"8px 12px", fontSize:12, fontWeight:600, cursor:"pointer"
+                   background:"#f0fdf4", border:"1px solid #bbf7d0", color:"#166534", 
+                   borderRadius: 8, padding:"8px 12px", fontSize:12, fontWeight:700, cursor:"pointer"
                  }}>Complete</button>
                  <button onClick={() => { setCancelId(b.id); setShowCancel(true); }} className="tap" style={{
-                   background:"none", border:"none", color:"#dc2626", 
-                   borderRadius: 8, padding:"8px 0px", fontSize:12, fontWeight:600, cursor:"pointer"
+                   background:"#fef2f2", border:"1px solid #fecaca", color:"#991b1b", 
+                   borderRadius: 8, padding:"8px 12px", fontSize:12, fontWeight:700, cursor:"pointer"
                  }}>Cancel</button>
                </div>
             )}
@@ -670,9 +682,10 @@ export default function App() {
           {b.status === "Completed" && (
             <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px dashed ${BRAND.border}` }}>
               <button onClick={() => { setQrBooking(b); setShowQR(true); }} className="tap" style={{
-                width: "100%", background: "#f8fafc", color: BRAND.dark,
-                border: `1px solid ${BRAND.border}`, borderRadius: 8, padding: "12px",
-                fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                width: "100%", background: BRAND.primary, color: "#fff",
+                border: "none", borderRadius: 10, padding: "14px",
+                fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                boxShadow: `0 4px 12px ${BRAND.primary}40`
               }}>
                 <Icons.QR /> Platform Fee / Review
               </button>
@@ -687,39 +700,40 @@ export default function App() {
     {showCancel && (
       <div className="fade-in" style={{
         position:"fixed", inset:0, background:"rgba(15,23,42,0.6)",
-        backdropFilter:"blur(4px)", zIndex:100,
+        backdropFilter:"blur(6px)", zIndex:100,
         display:"flex", alignItems:"flex-end", justifyContent:"center"
       }}>
         <div className="slide-up" style={{
-          background:"#fff", borderRadius:"20px 20px 0 0",
+          background:"#fff", borderRadius:"24px 24px 0 0",
           padding:"24px 24px 40px", width:"100%", maxWidth:430
         }}>
-          <div style={{ width:40, height:4, background:"#cbd5e1", borderRadius:4, margin:"0 auto 24px" }} />
-          <h3 style={{ fontSize:18, fontWeight:700, color:BRAND.dark, marginBottom:6 }}>Cancel Booking</h3>
+          <div style={{ width:40, height:5, background:"#cbd5e1", borderRadius:4, margin:"0 auto 24px" }} />
+          <h3 style={{ fontSize:20, fontWeight:800, color:BRAND.dark, marginBottom:6 }}>Cancel Booking</h3>
           <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:24 }}>Please select a reason.</p>
           
           <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:32 }}>
             {CANCEL_REASONS.map(r => (
               <button key={r} onClick={() => setCancelReason(r)} style={{
-                padding:"14px", borderRadius: 10, textAlign:"left",
-                fontSize:14, fontWeight:500, cursor:"pointer",
-                border: cancelReason===r ? `1px solid ${BRAND.dark}` : `1px solid ${BRAND.border}`,
-                background: cancelReason===r ? "#f1f5f9" : "#fff",
-                color: BRAND.dark, transition: "all 0.2s"
+                padding:"16px", borderRadius: 12, textAlign:"left",
+                fontSize:14, fontWeight:600, cursor:"pointer",
+                border: cancelReason===r ? `1.5px solid ${BRAND.primary}` : `1px solid ${BRAND.border}`,
+                background: cancelReason===r ? BRAND.primaryLight : "#fff",
+                color: cancelReason===r ? BRAND.primary : BRAND.subtle,
+                transition: "all 0.2s"
               }}>{r}</button>
             ))}
           </div>
           
           <div style={{ display:"flex", gap:12 }}>
             <button onClick={() => { setShowCancel(false); setCancelReason(""); }} className="tap" style={{
-              flex:1, padding:"14px", borderRadius: 10, border:`1px solid ${BRAND.border}`,
-              background:"#fff", color:BRAND.dark, fontSize:14, fontWeight:600
+              flex:1, padding:"16px", borderRadius: 12, border:`1px solid ${BRAND.border}`,
+              background:"#fff", color:BRAND.dark, fontSize:15, fontWeight:700
             }}>Back</button>
             <button onClick={handleCancel} disabled={!cancelReason} className="tap" style={{
-              flex:1, padding:"14px", borderRadius: 10, border:"none",
+              flex:1, padding:"16px", borderRadius: 12, border:"none",
               background: cancelReason ? "#dc2626" : "#fca5a5",
-              color:"#fff", fontSize:14, fontWeight:600,
-            }}>Confirm Cancel</button>
+              color:"#fff", fontSize:15, fontWeight:700,
+            }}>Confirm</button>
           </div>
         </div>
       </div>
@@ -728,35 +742,35 @@ export default function App() {
     {/* ── PROFESSIONAL DEMO QR MODAL ── */}
     {showQR && (
       <div className="fade-in" style={{
-        position:"fixed", inset:0, background:"rgba(15,23,42,0.6)",
-        backdropFilter:"blur(4px)", zIndex:100,
+        position:"fixed", inset:0, background:"rgba(15,23,42,0.7)",
+        backdropFilter:"blur(8px)", zIndex:100,
         display:"flex", alignItems:"center", justifyContent:"center", padding: 24
       }}>
         <div className="slide-up" style={{
-          background:"#fff", borderRadius:"20px",
+          background:"#fff", borderRadius:"24px",
           padding:"32px 24px", width:"100%", maxWidth:320, textAlign: "center",
-          boxShadow: "0 10px 25px rgba(0,0,0,0.1)"
+          boxShadow: "0 24px 48px rgba(0,0,0,0.2)"
         }}>
           {/* Professional Demo/Test Badge */}
-          <div style={{ display: "inline-block", background: "#fef3c7", color: "#b45309", fontSize: 10, fontWeight: 700, padding: "4px 8px", borderRadius: 6, marginBottom: 16, letterSpacing: "0.5px" }}>
+          <div style={{ display: "inline-block", background: "#fef3c7", color: "#b45309", fontSize: 10, fontWeight: 800, padding: "4px 10px", borderRadius: 8, marginBottom: 16, letterSpacing: "0.5px" }}>
             DEMO GATEWAY
           </div>
           
-          <h3 style={{ fontSize:18, fontWeight:700, color:BRAND.dark, marginBottom:8 }}>Pay {qrBooking?.worker_name}</h3>
-          <p style={{ fontSize:13, color:BRAND.subtle, fontWeight:500, marginBottom:24 }}>
+          <h3 style={{ fontSize:20, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Pay {qrBooking?.worker_name}</h3>
+          <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:24 }}>
             Scan to securely transfer platform fee and base charges.
           </p>
           
-          <div style={{ background: "#f8fafc", padding: 16, borderRadius: 12, border: `1px solid ${BRAND.border}`, marginBottom: 24, display: "inline-block" }}>
+          <div style={{ background: BRAND.bg, padding: 16, borderRadius: 16, border: `1.5px solid ${BRAND.border}`, marginBottom: 24, display: "inline-block" }}>
             {/* Dynamic Placeholder QR - Shows the worker name encoded in the URI visually */}
             <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=demo@ybl&pn=Sevamitra%20Demo%20(${encodeURIComponent(qrBooking?.worker_name)})`} 
                  alt="Demo Payment QR" 
-                 style={{ width: 160, height: 160, borderRadius: 4 }} />
+                 style={{ width: 160, height: 160, borderRadius: 8 }} />
           </div>
           
           <button onClick={() => setShowQR(false)} className="tap" style={{
-            width: "100%", padding:"14px", borderRadius: 10, border:`1px solid ${BRAND.border}`,
-            background:"#fff", color:BRAND.dark, fontSize:14, fontWeight:600
+            width: "100%", padding:"16px", borderRadius: 12, border:`1.5px solid ${BRAND.border}`,
+            background:"#fff", color:BRAND.dark, fontSize:15, fontWeight:700
           }}>Close Demo</button>
         </div>
       </div>
@@ -765,34 +779,38 @@ export default function App() {
 
   // ── PROFILE ───────────────────────────────────────────────────────────────
   if (tab === "profile") return shell(<>
-    <div style={{ background:"#fff", padding:"40px 24px 32px", borderBottom: `1px solid ${BRAND.border}` }}>
-      <div style={{
-        width: 64, height: 64, borderRadius: 16,
-        background: "#f1f5f9", color: BRAND.dark,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 24, fontWeight: 700, marginBottom: 16,
-      }}>{user.name[0].toUpperCase()}</div>
-      <h2 style={{ fontSize: 20, fontWeight: 700, color: BRAND.dark, marginBottom: 4 }}>{user.name}</h2>
-      <p style={{ color: BRAND.subtle, fontSize: 14, fontWeight: 500 }}>{user.phone}</p>
+    <div style={{ background: `linear-gradient(135deg, ${BRAND.primaryDark} 0%, ${BRAND.primary} 100%)`, padding: "48px 24px 32px", borderRadius: "0 0 24px 24px", color: "#fff", boxShadow: "0 12px 24px rgba(37, 99, 235, 0.15)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{
+          width: 72, height: 72, borderRadius: 20,
+          background: "rgba(255,255,255,0.2)", border: "2px solid rgba(255,255,255,0.4)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 28, fontWeight: 800, color: "#fff",
+        }}>{user.name[0].toUpperCase()}</div>
+        <div>
+          <h2 style={{ fontSize: 24, fontWeight: 800, color: "#fff", marginBottom: 4 }}>{user.name}</h2>
+          <p style={{ color: BRAND.primaryLight, fontSize: 14, fontWeight: 500 }}>{user.phone}</p>
+        </div>
+      </div>
     </div>
 
-    <div style={{ flex:1, overflowY:"auto", padding:"24px 20px 100px" }}>
+    <div style={{ flex:1, overflowY:"auto", padding:"32px 20px 100px" }}>
       
-      <div style={{ background:"#fff", borderRadius: 12, border:`1px solid ${BRAND.border}`, overflow:"hidden", marginBottom: 24 }}>
+      <div style={{ background:"#fff", borderRadius: 16, border:`1px solid ${BRAND.border}`, overflow:"hidden", marginBottom: 24, boxShadow:"0 2px 8px rgba(0,0,0,0.02)" }}>
         {[
           { label:"Help & Support" },
           { label:"Terms of Service" },
           { label:"About Sevamitra" },
         ].map((item, i, arr) => (
           <button key={item.label} className="tap" style={{
-            width:"100%", padding:"18px 20px", background:"none",
+            width:"100%", padding:"20px 24px", background:"none",
             border:"none", borderBottom:i<arr.length-1?`1px solid ${BRAND.border}`:"none",
             display:"flex", justifyContent:"space-between", alignItems:"center",
-            color:BRAND.dark, fontSize: 14, fontWeight: 500
+            color:BRAND.dark, fontSize: 15, fontWeight: 600
           }}>
             {item.label}
             <span style={{ color:"#94a3b8" }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
             </span>
           </button>
         ))}
@@ -801,9 +819,9 @@ export default function App() {
       <button onClick={() => { localStorage.clear(); window.location.reload(); }}
         className="tap"
         style={{
-          width:"100%", padding:"16px", borderRadius: 12,
-          background:"#fff", border:`1px solid ${BRAND.border}`,
-          color:"#dc2626", fontSize:14, fontWeight:600,
+          width:"100%", padding:"18px", borderRadius: 16,
+          background:"#fef2f2", border:"1.5px solid #fecaca",
+          color:"#dc2626", fontSize:15, fontWeight:700,
         }}>
         Log Out
       </button>
