@@ -59,7 +59,8 @@ const Icons = {
   Star: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
   MapPin: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
   CheckCircle: () => <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
-  Lightning: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+  Lightning: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+  ShieldAlert: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
 };
 
 const CAT_ICONS = { 
@@ -252,8 +253,15 @@ export default function App() {
   const [showCancel,   setShowCancel]   = useState(false);
   const [cancelId,     setCancelId]     = useState(null);
   const [cancelReason, setCancelReason] = useState("");
+  
+  // States for Upfront Booking Payment
   const [showQR,       setShowQR]       = useState(false); 
   const [payState,     setPayState]     = useState("idle"); 
+  
+  // States for Final Job Completion Payment (from History tab)
+  const [showHistoryQR, setShowHistoryQR] = useState(false);
+  const [historyPayState, setHistoryPayState] = useState("idle");
+  const [qrBooking,    setQrBooking]    = useState(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("sevamitra_user");
@@ -501,8 +509,7 @@ export default function App() {
 
     // Provider Profile & Booking Flow
     if (screen === "profile") {
-      // Define the UPI deep link URL based on the selected provider
-      const upiLink = `upi://pay?pa=demo@ybl&pn=Sevamitra%20Demo%20(${encodeURIComponent(selProv?.name)})&cu=INR`;
+      const upfrontUpiLink = `upi://pay?pa=demo@ybl&pn=Sevamitra%20Demo%20(${encodeURIComponent(selProv?.name)})&cu=INR`;
 
       return shell(<>
         <div style={{ background: "#fff", borderBottom: `1px solid ${BRAND.border}` }}>
@@ -549,7 +556,7 @@ export default function App() {
             {[
               "Tap call below — we secure your number.",
               "Discuss the issue and finalize pricing.",
-              "Confirm & Pay to secure the booking.",
+              "Confirm to secure the booking.",
             ].map((s, i) => (
               <div key={i} style={{ display:"flex", gap:16, alignItems:"flex-start", marginBottom:i<2?16:0 }}>
                 <div style={{
@@ -603,7 +610,7 @@ export default function App() {
                 <Icons.CheckCircle /> Connected! Please confirm below to secure expert.
               </div>
 
-              {/* THIS TRIGGERS THE PAYMENT QR FLOW */}
+              {/* THIS TRIGGERS THE BOOKING QR FLOW */}
               <button onClick={() => setShowQR(true)} className="tap" style={{
                 width:"100%", background: BRAND.primary,
                 color:"#fff", border:"none", borderRadius: 14, padding:"16px",
@@ -624,7 +631,7 @@ export default function App() {
           )}
         </div>
 
-        {/* ── PROFESSIONAL DEMO QR & UPI INTENT MODAL ── */}
+        {/* ── PROFESSIONAL DEMO QR & UPI INTENT MODAL (UPFRONT BOOKING) ── */}
         {showQR && (
           <div className="fade-in" style={{
             position:"fixed", inset:0, background:"rgba(15,23,42,0.7)",
@@ -637,24 +644,21 @@ export default function App() {
               boxShadow: "0 -10px 40px rgba(0,0,0,0.15)"
             }}>
               
-              {/* DEFAULT STATE: Show QR & UPI Button */}
               {payState === "idle" && (
                 <>
                   <div style={{ width:40, height:5, background:"#cbd5e1", borderRadius:4, margin:"0 auto 24px" }} />
                   <h3 style={{ fontSize:20, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Secure Booking</h3>
                   <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:24 }}>
-                    Pay ₹{selProv?.base_price} Base Fee + ₹20 Security Fee to confirm your expert.
+                    Pay a small booking fee to secure your expert now.
                   </p>
                   
-                  {/* Dynamic QR for scanning */}
                   <div style={{ background: BRAND.bg, padding: 16, borderRadius: 16, border: `1.5px solid ${BRAND.border}`, marginBottom: 24, display: "inline-block" }}>
-                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(upiLink)}`} 
+                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(upfrontUpiLink)}`} 
                          alt="Demo Payment QR" 
                          style={{ width: 140, height: 140, borderRadius: 8 }} />
                   </div>
 
-                  {/* UPI DEEP LINK BUTTON - OPENS GPAY/PHONEPE */}
-                  <a href={upiLink} style={{
+                  <a href={upfrontUpiLink} style={{
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                     width: "100%", background: BRAND.dark, color: "#fff", textDecoration: "none",
                     padding: "16px", borderRadius: 14, fontSize: 15, fontWeight: 700, marginBottom: 12,
@@ -663,7 +667,6 @@ export default function App() {
                     <Icons.Lightning /> Pay using UPI Apps
                   </a>
 
-                  {/* VERIFY BUTTON - TRIGGERS SUCCESS FLOW */}
                   <button onClick={() => {
                     setPayState("loading");
                     setTimeout(() => setPayState("success"), 2000); 
@@ -680,7 +683,6 @@ export default function App() {
                 </>
               )}
 
-              {/* LOADING STATE */}
               {payState === "loading" && (
                 <div className="fade-in" style={{ padding: "60px 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
                   <Spinner color={BRAND.primary} />
@@ -689,20 +691,19 @@ export default function App() {
                 </div>
               )}
 
-              {/* SUCCESS STATE */}
               {payState === "success" && (
                 <div className="fade-up" style={{ padding: "40px 0 20px" }}>
                   <div style={{ color: "#10b981", marginBottom: 16, display: "flex", justifyContent: "center" }}>
                     <Icons.CheckCircle />
                   </div>
-                  <h3 style={{ fontSize:22, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Payment Successful!</h3>
+                  <h3 style={{ fontSize:22, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Booking Confirmed!</h3>
                   <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:24, lineHeight: 1.5 }}>
-                    Funds have been securely routed. Your 7-Day warranty is active!
+                    Expert secured. You will pay the final amount after the job is completed.
                   </p>
                   <button onClick={() => {
                     setShowQR(false);
                     setPayState("idle");
-                    handleBook(); // Proceeds to the Booking Done screen
+                    handleBook(); 
                   }} className="tap" style={{
                     width: "100%", padding:"16px", borderRadius: 14, border:"none",
                     background:BRAND.primary, color:"#fff", fontSize:15, fontWeight:800,
@@ -786,16 +787,164 @@ export default function App() {
             </p>
             {b.status === "Confirmed" && (
                <div style={{ display: "flex", gap: 8 }}>
-                 <button onClick={() => handleComplete(b.id)} className="tap" style={{
+                 {/* COMPLETE JOB BUTTON -> TRIGGERS FINAL PAYMENT MODAL */}
+                 <button onClick={() => { setQrBooking(b); setShowHistoryQR(true); setHistoryPayState("idle"); }} className="tap" style={{
                    background:"#f0fdf4", border:"1px solid #bbf7d0", color:"#166534", 
                    borderRadius: 8, padding:"8px 12px", fontSize:12, fontWeight:700, cursor:"pointer"
                  }}>Complete Job</button>
+                 
+                 {/* CANCEL BUTTON RESTORED */}
+                 <button onClick={() => { setCancelId(b.id); setShowCancel(true); }} className="tap" style={{
+                   background:"#fef2f2", border:"1px solid #fecaca", color:"#991b1b", 
+                   borderRadius: 8, padding:"8px 12px", fontSize:12, fontWeight:700, cursor:"pointer"
+                 }}>Cancel</button>
                </div>
             )}
           </div>
         </div>
       ))}
     </div>
+
+    {/* Cancel Modal */}
+    {showCancel && (
+      <div className="fade-in" style={{
+        position:"fixed", inset:0, background:"rgba(15,23,42,0.6)",
+        backdropFilter:"blur(6px)", zIndex:100,
+        display:"flex", alignItems:"flex-end", justifyContent:"center"
+      }}>
+        <div className="slide-up" style={{
+          background:"#fff", borderRadius:"24px 24px 0 0",
+          padding:"24px 24px 40px", width:"100%", maxWidth:430
+        }}>
+          <div style={{ width:40, height:5, background:"#cbd5e1", borderRadius:4, margin:"0 auto 24px" }} />
+          <h3 style={{ fontSize:20, fontWeight:800, color:BRAND.dark, marginBottom:6 }}>Cancel Booking</h3>
+          <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:24 }}>Please select a reason.</p>
+          
+          <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:32 }}>
+            {CANCEL_REASONS.map(r => (
+              <button key={r} onClick={() => setCancelReason(r)} style={{
+                padding:"16px", borderRadius: 12, textAlign:"left",
+                fontSize:14, fontWeight:600, cursor:"pointer",
+                border: cancelReason===r ? `1.5px solid ${BRAND.primary}` : `1px solid ${BRAND.border}`,
+                background: cancelReason===r ? BRAND.primaryLight : "#fff",
+                color: cancelReason===r ? BRAND.primary : BRAND.subtle,
+                transition: "all 0.2s"
+              }}>{r}</button>
+            ))}
+          </div>
+          
+          <div style={{ display:"flex", gap:12 }}>
+            <button onClick={() => { setShowCancel(false); setCancelReason(""); }} className="tap" style={{
+              flex:1, padding:"16px", borderRadius: 12, border:`1px solid ${BRAND.border}`,
+              background:"#fff", color:BRAND.dark, fontSize:15, fontWeight:700
+            }}>Back</button>
+            <button onClick={handleCancel} disabled={!cancelReason} className="tap" style={{
+              flex:1, padding:"16px", borderRadius: 12, border:"none",
+              background: cancelReason ? "#dc2626" : "#fca5a5",
+              color:"#fff", fontSize:15, fontWeight:700,
+            }}>Confirm</button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── FINAL JOB COMPLETION & PAYMENT MODAL ── */}
+    {showHistoryQR && (
+      <div className="fade-in" style={{
+        position:"fixed", inset:0, background:"rgba(15,23,42,0.7)",
+        backdropFilter:"blur(8px)", zIndex:100,
+        display:"flex", alignItems:"flex-end", justifyContent:"center"
+      }}>
+        <div className="slide-up" style={{
+          background:"#fff", borderRadius:"24px 24px 0 0",
+          padding:"24px 24px 40px", width:"100%", maxWidth:430, textAlign: "center",
+          boxShadow: "0 -10px 40px rgba(0,0,0,0.15)"
+        }}>
+          
+          {historyPayState === "idle" && (
+            <>
+              <div style={{ width:40, height:5, background:"#cbd5e1", borderRadius:4, margin:"0 auto 24px" }} />
+              <h3 style={{ fontSize:20, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Complete & Settle</h3>
+              <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:16 }}>
+                Please enter the final negotiated amount in your UPI app.
+              </p>
+
+              {/* The Psychological Trap UI */}
+              <div style={{ background: "#fef2f2", border: "1px solid #fecaca", padding: "12px 16px", borderRadius: 12, marginBottom: 20, textAlign: "left", display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <div style={{ color: "#dc2626", marginTop: 2 }}><Icons.ShieldAlert /></div>
+                <p style={{ fontSize: 13, color: "#991b1b", fontWeight: 600, lineHeight: 1.5, margin: 0 }}>
+                  <span style={{ fontWeight: 800 }}>WARNING:</span> Paying in cash instantly voids your 7-Day Free Recast Warranty. Pay via the app to stay protected.
+                </p>
+              </div>
+
+              <div style={{ background: BRAND.primaryLight, color: BRAND.primaryDark, padding: "8px 16px", borderRadius: 20, fontSize: 12, fontWeight: 700, display: "inline-block", marginBottom: 20 }}>
+                Includes ₹30 Sevamitra Security Fee
+              </div>
+              
+              <div style={{ background: BRAND.bg, padding: 16, borderRadius: 16, border: `1.5px solid ${BRAND.border}`, marginBottom: 24, display: "inline-block" }}>
+                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=upi://pay?pa=demo@ybl&pn=Sevamitra%20Demo%20(${encodeURIComponent(qrBooking?.worker_name)})&cu=INR`} 
+                     alt="Demo Final Payment QR" 
+                     style={{ width: 140, height: 140, borderRadius: 8 }} />
+              </div>
+
+              <a href={`upi://pay?pa=demo@ybl&pn=Sevamitra%20Demo%20(${encodeURIComponent(qrBooking?.worker_name)})&cu=INR`} style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                width: "100%", background: BRAND.dark, color: "#fff", textDecoration: "none",
+                padding: "16px", borderRadius: 14, fontSize: 15, fontWeight: 700, marginBottom: 12,
+                boxShadow: "0 4px 12px rgba(15, 23, 42, 0.15)"
+              }}>
+                <Icons.Lightning /> Pay using UPI Apps
+              </a>
+
+              <button onClick={() => {
+                setHistoryPayState("loading");
+                setTimeout(() => setHistoryPayState("success"), 2000); 
+              }} className="tap" style={{
+                width: "100%", padding:"16px", borderRadius: 14, border:`1.5px solid ${BRAND.primary}`,
+                background:BRAND.primaryLight, color:BRAND.primary, fontSize:15, fontWeight:700, marginBottom: 12
+              }}>
+                I have paid, verify status
+              </button>
+              
+              <button onClick={() => { setShowHistoryQR(false); setHistoryPayState("idle"); }} style={{
+                background:"none", border:"none", color:BRAND.subtle, fontSize:14, fontWeight:600, padding: "8px"
+              }}>Close</button>
+            </>
+          )}
+
+          {historyPayState === "loading" && (
+            <div className="fade-in" style={{ padding: "60px 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <Spinner color={BRAND.primary} />
+              <p style={{ marginTop: 24, fontSize: 16, fontWeight: 700, color: BRAND.dark }}>Verifying Webhook...</p>
+              <p style={{ marginTop: 6, fontSize: 13, color: BRAND.subtle, fontWeight: 500 }}>Checking final payment status.</p>
+            </div>
+          )}
+
+          {historyPayState === "success" && (
+            <div className="fade-up" style={{ padding: "40px 0 20px" }}>
+              <div style={{ color: "#10b981", marginBottom: 16, display: "flex", justifyContent: "center" }}>
+                <Icons.CheckCircle />
+              </div>
+              <h3 style={{ fontSize:22, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Job Completed!</h3>
+              <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:24, lineHeight: 1.5 }}>
+                Payment successful. Your 7-Day Free Recast Warranty is now active.
+              </p>
+              <button onClick={() => {
+                setShowHistoryQR(false);
+                setHistoryPayState("idle");
+                handleComplete(qrBooking.id); // Triggers Backend "Complete" action
+              }} className="tap" style={{
+                width: "100%", padding:"16px", borderRadius: 14, border:"none",
+                background:BRAND.primary, color:"#fff", fontSize:15, fontWeight:800,
+                boxShadow: `0 8px 20px ${BRAND.primary}40`
+              }}>Done</button>
+            </div>
+          )}
+
+        </div>
+      </div>
+    )}
+
   </>);
 
   // ── PROFILE ───────────────────────────────────────────────────────────────
