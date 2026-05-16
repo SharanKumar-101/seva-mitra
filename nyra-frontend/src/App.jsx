@@ -59,6 +59,7 @@ const Icons = {
   Star: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
   MapPin: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
   CheckCircle: () => <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+  CheckSmall: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
   Lightning: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
   ShieldAlert: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
 };
@@ -181,13 +182,14 @@ function LoginScreen({ onLogin }) {
         {/* APP LOGO GOES HERE */}
         <img 
           src="/logo.png" 
-          alt="Sevamitra" 
+          alt="Sevamitra Logo" 
           style={{ width: "160px", height: "auto", borderRadius: "16px", marginBottom: "16px", boxShadow: "0 12px 24px rgba(0,0,0,0.15)" }} 
           onError={(e) => {
             e.target.style.display = 'none';
             e.target.nextSibling.style.display = 'block';
           }}
         />
+        {/* Fallback Text if Logo breaks */}
         <h1 style={{ display: "none", fontSize:38, fontWeight:800, letterSpacing:"-0.5px", marginBottom:8, color: "#fff" }}>
           Sevamitra.
         </h1>
@@ -320,32 +322,48 @@ export default function App() {
 
   const handleBook = async () => {
     setCallState("booking");
-    await fetch(`${BASE_URL}/bookings/`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customer_name: user.name,
-        customer_phone: user.phone,
-        provider_id: selProv.id,
-      }),
-    });
-    await fetchData();
+    // OPTIMISTIC UI: Add to UI instantly for demo
+    const newBooking = { id: Date.now(), customer_phone: user.phone, worker_name: selProv.name, category: selProv.category, status: "Confirmed", time: new Date().toISOString() };
+    setBookings(prev => [newBooking, ...prev]);
+    
+    try {
+      await fetch(`${BASE_URL}/bookings/`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer_name: user.name, customer_phone: user.phone, provider_id: selProv.id,
+        }),
+      });
+      fetchData(); // Sync quietly in background
+    } catch {}
+    
     setCallState("done");
     setScreen("success");
   };
 
+  // INSTANT CANCEL FIX
   const handleCancel = async () => {
     if (!cancelReason) return;
-    await fetch(`${BASE_URL}/bookings/${cancelId}/cancel`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reason: cancelReason }),
-    });
-    setShowCancel(false); setCancelReason(""); await fetchData();
+    // Optimistic UI Update: Instantly change to Cancelled
+    setBookings(prev => prev.map(b => b.id === cancelId ? { ...b, status: "Cancelled" } : b));
+    setShowCancel(false); setCancelReason("");
+    
+    try {
+      await fetch(`${BASE_URL}/bookings/${cancelId}/cancel`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: cancelReason }),
+      });
+      fetchData(); // Sync quietly
+    } catch {}
   };
 
+  // INSTANT COMPLETE JOB FIX
   const handleComplete = async (bookingId) => {
+    // Optimistic UI Update: Instantly hide the button and show as Completed
+    setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: "Completed" } : b));
+    
     try {
       await fetch(`${BASE_URL}/bookings/${bookingId}/complete`, { method:"PUT" });
-      await fetchData();
+      fetchData(); // Sync quietly
     } catch {}
   };
 
@@ -785,6 +803,8 @@ export default function App() {
             <p style={{ fontSize:13, color:BRAND.subtle, fontWeight:600 }}>
               {new Date(b.time).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}
             </p>
+            
+            {/* Show buttons ONLY if status is Confirmed */}
             {b.status === "Confirmed" && (
                <div style={{ display: "flex", gap: 8 }}>
                  {/* COMPLETE JOB BUTTON -> TRIGGERS FINAL PAYMENT MODAL */}
@@ -793,11 +813,18 @@ export default function App() {
                    borderRadius: 8, padding:"8px 12px", fontSize:12, fontWeight:700, cursor:"pointer"
                  }}>Complete Job</button>
                  
-                 {/* CANCEL BUTTON RESTORED */}
+                 {/* CANCEL BUTTON */}
                  <button onClick={() => { setCancelId(b.id); setShowCancel(true); }} className="tap" style={{
                    background:"#fef2f2", border:"1px solid #fecaca", color:"#991b1b", 
                    borderRadius: 8, padding:"8px 12px", fontSize:12, fontWeight:700, cursor:"pointer"
                  }}>Cancel</button>
+               </div>
+            )}
+            
+            {/* Show Success Text if status is Completed */}
+            {b.status === "Completed" && (
+               <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#10b981", fontSize: 13, fontWeight: 800 }}>
+                 <Icons.CheckSmall /> Job Done & Paid
                </div>
             )}
           </div>
@@ -932,7 +959,7 @@ export default function App() {
               <button onClick={() => {
                 setShowHistoryQR(false);
                 setHistoryPayState("idle");
-                handleComplete(qrBooking.id); // Triggers Backend "Complete" action
+                handleComplete(qrBooking.id); // Triggers Instant UI hiding of buttons
               }} className="tap" style={{
                 width: "100%", padding:"16px", borderRadius: 14, border:"none",
                 background:BRAND.primary, color:"#fff", fontSize:15, fontWeight:800,
