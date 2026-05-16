@@ -207,6 +207,16 @@ def cancel_booking(booking_id: int, reason_data: dict):
         booking.cancel_reason = reason_data.get("reason", "Not specified")
     return {"msg": "Booking cancelled"}
 
+# --- NEW ROUTE: Complete Booking ---
+@app.put("/bookings/{booking_id}/complete")
+def complete_booking(booking_id: int):
+    with get_db() as db:
+        booking = db.query(Booking).filter(Booking.id == booking_id).first()
+        if not booking: 
+            raise HTTPException(status_code=404, detail="Booking not found")
+        booking.status = "Completed"
+    return {"msg": "Booking successfully marked as Completed"}
+
 # --- 7. SERVE FRONTEND ---
 DIST_DIR = os.path.join(os.getcwd(), "nyra-frontend", "dist")
 
