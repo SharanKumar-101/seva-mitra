@@ -179,11 +179,16 @@ function LoginScreen({ onLogin }) {
       justifyContent:"center", padding:24
     }}>
       <div className="fade-up" style={{ textAlign: "center", marginBottom:40 }}>
-        {/* APP LOGO GOES HERE */}
+        
+        {/* LOGO FIX 1: Display Block and Margin Auto perfectly centers it */}
         <img 
           src="/logo.png" 
           alt="Sevamitra Logo" 
-          style={{ width: "160px", height: "auto", borderRadius: "16px", marginBottom: "16px", boxShadow: "0 12px 24px rgba(0,0,0,0.15)" }} 
+          style={{ 
+            display: "block", margin: "0 auto 16px auto", 
+            width: "160px", height: "auto", borderRadius: "24px", 
+            boxShadow: "0 12px 32px rgba(0,0,0,0.2)" 
+          }} 
           onError={(e) => {
             e.target.style.display = 'none';
             e.target.nextSibling.style.display = 'block';
@@ -210,7 +215,6 @@ function LoginScreen({ onLogin }) {
           onFocus={e => e.target.style.borderColor=BRAND.primary}
           onBlur={e  => e.target.style.borderColor=BRAND.border} />
           
-        {/* Professional +91 Locked Input */}
         <div style={{ display: "flex", gap: 10, marginBottom: 28 }}>
           <div style={{ 
             ...inp, width: "auto", marginBottom: 0, background: "#f1f5f9", 
@@ -260,7 +264,7 @@ export default function App() {
   const [showQR,       setShowQR]       = useState(false); 
   const [payState,     setPayState]     = useState("idle"); 
   
-  // States for Final Job Completion Payment (from History tab)
+  // States for Final Job Completion Payment
   const [showHistoryQR, setShowHistoryQR] = useState(false);
   const [historyPayState, setHistoryPayState] = useState("idle");
   const [qrBooking,    setQrBooking]    = useState(null);
@@ -322,7 +326,6 @@ export default function App() {
 
   const handleBook = async () => {
     setCallState("booking");
-    // OPTIMISTIC UI: Add to UI instantly for demo
     const newBooking = { id: Date.now(), customer_phone: user.phone, worker_name: selProv.name, category: selProv.category, status: "Confirmed", time: new Date().toISOString() };
     setBookings(prev => [newBooking, ...prev]);
     
@@ -333,17 +336,15 @@ export default function App() {
           customer_name: user.name, customer_phone: user.phone, provider_id: selProv.id,
         }),
       });
-      fetchData(); // Sync quietly in background
+      fetchData(); 
     } catch {}
     
     setCallState("done");
     setScreen("success");
   };
 
-  // INSTANT CANCEL FIX
   const handleCancel = async () => {
     if (!cancelReason) return;
-    // Optimistic UI Update: Instantly change to Cancelled
     setBookings(prev => prev.map(b => b.id === cancelId ? { ...b, status: "Cancelled" } : b));
     setShowCancel(false); setCancelReason("");
     
@@ -352,18 +353,15 @@ export default function App() {
         method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason: cancelReason }),
       });
-      fetchData(); // Sync quietly
+      fetchData();
     } catch {}
   };
 
-  // INSTANT COMPLETE JOB FIX
   const handleComplete = async (bookingId) => {
-    // Optimistic UI Update: Instantly hide the button and show as Completed
     setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: "Completed" } : b));
-    
     try {
       await fetch(`${BASE_URL}/bookings/${bookingId}/complete`, { method:"PUT" });
-      fetchData(); // Sync quietly
+      fetchData();
     } catch {}
   };
 
@@ -375,7 +373,6 @@ export default function App() {
   const myBookings    = bookings.filter(b => b.customer_phone === user.phone);
   const catProviders  = providers.filter(p => p.category === selCat);
 
-  // Wrapper shell
   const shell = (children) => (
     <div style={{
       minHeight:"100vh", background: BRAND.bg,
@@ -389,19 +386,22 @@ export default function App() {
   );
 
   // ── HOME ──────────────────────────────────────────────────────────────────
-
   if (tab === "home") {
-
     if (screen === "home") return shell(<>
       <div style={{ background: `linear-gradient(135deg, ${BRAND.primaryDark} 0%, ${BRAND.primary} 100%)`, padding: "48px 24px 32px", borderRadius: "0 0 24px 24px", color: "#fff", boxShadow: "0 12px 24px rgba(37, 99, 235, 0.15)" }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.5px" }}>Sevamitra.</h1>
-        <p style={{ color: BRAND.primaryLight, fontSize: 14, marginTop: 4, fontWeight: 500 }}>
+        
+        {/* LOGO FIX 2: Added mini-logo to the Home Header */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+          <img src="/logo.png" alt="Logo" style={{ width: 44, height: 44, borderRadius: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }} />
+          <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.5px", margin: 0 }}>Sevamitra.</h1>
+        </div>
+        
+        <p style={{ color: BRAND.primaryLight, fontSize: 14, fontWeight: 500, margin: 0 }}>
           Welcome back, {user.name.split(" ")[0]}
         </p>
       </div>
 
       <div style={{ flex:1, overflowY:"auto", padding:"24px 20px 100px" }}>
-        
         <div style={{ display:"flex", gap:12, marginBottom:28, marginTop: -12 }}>
           {[
             { label:"Active", value: myBookings.filter(b=>b.status==="Confirmed").length, highlight: true },
@@ -628,7 +628,6 @@ export default function App() {
                 <Icons.CheckCircle /> Connected! Please confirm below to secure expert.
               </div>
 
-              {/* THIS TRIGGERS THE BOOKING QR FLOW */}
               <button onClick={() => setShowQR(true)} className="tap" style={{
                 width:"100%", background: BRAND.primary,
                 color:"#fff", border:"none", borderRadius: 14, padding:"16px",
@@ -649,7 +648,7 @@ export default function App() {
           )}
         </div>
 
-        {/* ── PROFESSIONAL DEMO QR & UPI INTENT MODAL (UPFRONT BOOKING) ── */}
+        {/* ── UPFRONT PAYMENT MODAL ── */}
         {showQR && (
           <div className="fade-in" style={{
             position:"fixed", inset:0, background:"rgba(15,23,42,0.7)",
@@ -709,8 +708,10 @@ export default function App() {
                 </div>
               )}
 
+              {/* LOGO FIX 3: Added Logo to Upfront Payment Success */}
               {payState === "success" && (
                 <div className="fade-up" style={{ padding: "40px 0 20px" }}>
+                  <img src="/logo.png" alt="Sevamitra" style={{ display: "block", margin: "0 auto 16px auto", width: 70, height: 70, borderRadius: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} />
                   <div style={{ color: "#10b981", marginBottom: 16, display: "flex", justifyContent: "center" }}>
                     <Icons.CheckCircle />
                   </div>
@@ -739,8 +740,14 @@ export default function App() {
     // Success Screen
     if (screen === "success") return shell(
       <div className="fade-in" style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:32 }}>
-        <div style={{ marginBottom: 24, color: "#10b981" }}><Icons.CheckCircle /></div>
-        <h2 style={{ fontSize:26, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Booking Done!</h2>
+        
+        {/* LOGO FIX 4: Added big Logo to the final Booking Success screen */}
+        <img src="/logo.png" alt="Sevamitra" style={{ display: "block", width: 100, height: 100, borderRadius: 24, marginBottom: 24, boxShadow: "0 8px 24px rgba(0,0,0,0.12)" }} />
+        
+        <div style={{ marginBottom: 16, color: "#10b981", display: "flex", alignItems: "center", gap: 10 }}>
+          <Icons.CheckCircle /> <span style={{ fontSize: 26, fontWeight: 800, color: BRAND.dark }}>Booking Done!</span>
+        </div>
+        
         <p style={{ color:BRAND.subtle, fontSize:15, fontWeight:500, textAlign:"center", marginBottom:40, lineHeight:1.6 }}>
           Your {selProv?.category?.toLowerCase()} has been secured and is on the way.
         </p>
@@ -804,16 +811,13 @@ export default function App() {
               {new Date(b.time).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}
             </p>
             
-            {/* Show buttons ONLY if status is Confirmed */}
             {b.status === "Confirmed" && (
                <div style={{ display: "flex", gap: 8 }}>
-                 {/* COMPLETE JOB BUTTON -> TRIGGERS FINAL PAYMENT MODAL */}
                  <button onClick={() => { setQrBooking(b); setShowHistoryQR(true); setHistoryPayState("idle"); }} className="tap" style={{
                    background:"#f0fdf4", border:"1px solid #bbf7d0", color:"#166534", 
                    borderRadius: 8, padding:"8px 12px", fontSize:12, fontWeight:700, cursor:"pointer"
                  }}>Complete Job</button>
                  
-                 {/* CANCEL BUTTON */}
                  <button onClick={() => { setCancelId(b.id); setShowCancel(true); }} className="tap" style={{
                    background:"#fef2f2", border:"1px solid #fecaca", color:"#991b1b", 
                    borderRadius: 8, padding:"8px 12px", fontSize:12, fontWeight:700, cursor:"pointer"
@@ -821,7 +825,6 @@ export default function App() {
                </div>
             )}
             
-            {/* Show Success Text if status is Completed */}
             {b.status === "Completed" && (
                <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#10b981", fontSize: 13, fontWeight: 800 }}>
                  <Icons.CheckSmall /> Job Done & Paid
@@ -896,7 +899,6 @@ export default function App() {
                 Please enter the final negotiated amount in your UPI app.
               </p>
 
-              {/* The Psychological Trap UI */}
               <div style={{ background: "#fef2f2", border: "1px solid #fecaca", padding: "12px 16px", borderRadius: 12, marginBottom: 20, textAlign: "left", display: "flex", gap: 12, alignItems: "flex-start" }}>
                 <div style={{ color: "#dc2626", marginTop: 2 }}><Icons.ShieldAlert /></div>
                 <p style={{ fontSize: 13, color: "#991b1b", fontWeight: 600, lineHeight: 1.5, margin: 0 }}>
@@ -947,8 +949,10 @@ export default function App() {
             </div>
           )}
 
+          {/* LOGO FIX 5: Added Logo to Final Settlement Success */}
           {historyPayState === "success" && (
             <div className="fade-up" style={{ padding: "40px 0 20px" }}>
+              <img src="/logo.png" alt="Sevamitra" style={{ display: "block", margin: "0 auto 16px auto", width: 70, height: 70, borderRadius: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} />
               <div style={{ color: "#10b981", marginBottom: 16, display: "flex", justifyContent: "center" }}>
                 <Icons.CheckCircle />
               </div>
@@ -959,7 +963,7 @@ export default function App() {
               <button onClick={() => {
                 setShowHistoryQR(false);
                 setHistoryPayState("idle");
-                handleComplete(qrBooking.id); // Triggers Instant UI hiding of buttons
+                handleComplete(qrBooking.id); 
               }} className="tap" style={{
                 width: "100%", padding:"16px", borderRadius: 14, border:"none",
                 background:BRAND.primary, color:"#fff", fontSize:15, fontWeight:800,
