@@ -13,7 +13,7 @@ styleEl.textContent = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; background: #f4f7f9; font-family: 'Plus Jakarta Sans', sans-serif; -webkit-font-smoothing: antialiased; }
   ::-webkit-scrollbar { display: none; }
-  input, button { font-family: 'Plus Jakarta Sans', sans-serif; }
+  input, button, a { font-family: 'Plus Jakarta Sans', sans-serif; }
 
   @keyframes fadeUp    { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
   @keyframes fadeIn    { from { opacity:0; } to { opacity:1; } }
@@ -59,7 +59,7 @@ const Icons = {
   Star: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
   MapPin: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
   CheckCircle: () => <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
-  QR: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><rect x="7" y="7" width="3" height="3"/><rect x="14" y="7" width="3" height="3"/><rect x="7" y="14" width="3" height="3"/><path d="M14 14h.01M17 14h.01M14 17h.01M17 17h.01"/></svg>
+  Lightning: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
 };
 
 const CAT_ICONS = { 
@@ -501,6 +501,9 @@ export default function App() {
 
     // Provider Profile & Booking Flow
     if (screen === "profile") {
+      // Define the UPI deep link URL based on the selected provider
+      const upiLink = `upi://pay?pa=demo@ybl&pn=Sevamitra%20Demo%20(${encodeURIComponent(selProv?.name)})&cu=INR`;
+
       return shell(<>
         <div style={{ background: "#fff", borderBottom: `1px solid ${BRAND.border}` }}>
           <div style={{ padding: "40px 20px 16px", display: "flex", alignItems: "center", gap: 16 }}>
@@ -621,64 +624,74 @@ export default function App() {
           )}
         </div>
 
-        {/* ── PROFESSIONAL DEMO QR MODAL WITH SECRET ADMIN APPROVAL ── */}
+        {/* ── PROFESSIONAL DEMO QR & UPI INTENT MODAL ── */}
         {showQR && (
           <div className="fade-in" style={{
             position:"fixed", inset:0, background:"rgba(15,23,42,0.7)",
             backdropFilter:"blur(8px)", zIndex:100,
-            display:"flex", alignItems:"center", justifyContent:"center", padding: 24
+            display:"flex", alignItems:"flex-end", justifyContent:"center"
           }}>
             <div className="slide-up" style={{
-              background:"#fff", borderRadius:"24px",
-              padding:"32px 24px", width:"100%", maxWidth:320, textAlign: "center",
-              boxShadow: "0 24px 48px rgba(0,0,0,0.2)"
+              background:"#fff", borderRadius:"24px 24px 0 0",
+              padding:"24px 24px 40px", width:"100%", maxWidth:430, textAlign: "center",
+              boxShadow: "0 -10px 40px rgba(0,0,0,0.15)"
             }}>
               
-              {/* DEFAULT STATE: Show QR Code */}
+              {/* DEFAULT STATE: Show QR & UPI Button */}
               {payState === "idle" && (
                 <>
-                  {/* SECRET ADMIN BUTTON: Click this badge to trigger fake success */}
-                  <button onClick={() => {
-                    setPayState("loading");
-                    setTimeout(() => setPayState("success"), 2000); 
-                  }} style={{ 
-                    display: "inline-block", background: "#fef3c7", color: "#b45309", 
-                    fontSize: 10, fontWeight: 800, padding: "6px 12px", borderRadius: 8, 
-                    marginBottom: 16, letterSpacing: "0.5px", border: "none", cursor: "pointer" 
-                  }}>
-                    DEMO GATEWAY
-                  </button>
-                  
+                  <div style={{ width:40, height:5, background:"#cbd5e1", borderRadius:4, margin:"0 auto 24px" }} />
                   <h3 style={{ fontSize:20, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Secure Booking</h3>
                   <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:24 }}>
                     Pay ₹{selProv?.base_price} Base Fee + ₹20 Security Fee to confirm your expert.
                   </p>
                   
+                  {/* Dynamic QR for scanning */}
                   <div style={{ background: BRAND.bg, padding: 16, borderRadius: 16, border: `1.5px solid ${BRAND.border}`, marginBottom: 24, display: "inline-block" }}>
-                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=demo@ybl&pn=Sevamitra%20Demo%20(${encodeURIComponent(selProv?.name)})`} 
+                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(upiLink)}`} 
                          alt="Demo Payment QR" 
-                         style={{ width: 160, height: 160, borderRadius: 8 }} />
+                         style={{ width: 140, height: 140, borderRadius: 8 }} />
                   </div>
+
+                  {/* UPI DEEP LINK BUTTON - OPENS GPAY/PHONEPE */}
+                  <a href={upiLink} style={{
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                    width: "100%", background: BRAND.dark, color: "#fff", textDecoration: "none",
+                    padding: "16px", borderRadius: 14, fontSize: 15, fontWeight: 700, marginBottom: 12,
+                    boxShadow: "0 4px 12px rgba(15, 23, 42, 0.15)"
+                  }}>
+                    <Icons.Lightning /> Pay using UPI Apps
+                  </a>
+
+                  {/* VERIFY BUTTON - TRIGGERS SUCCESS FLOW */}
+                  <button onClick={() => {
+                    setPayState("loading");
+                    setTimeout(() => setPayState("success"), 2000); 
+                  }} className="tap" style={{
+                    width: "100%", padding:"16px", borderRadius: 14, border:`1.5px solid ${BRAND.primary}`,
+                    background:BRAND.primaryLight, color:BRAND.primary, fontSize:15, fontWeight:700, marginBottom: 12
+                  }}>
+                    I have paid, verify status
+                  </button>
                   
-                  <button onClick={() => { setShowQR(false); setPayState("idle"); }} className="tap" style={{
-                    width: "100%", padding:"16px", borderRadius: 12, border:`1.5px solid ${BRAND.border}`,
-                    background:"#fff", color:BRAND.dark, fontSize:15, fontWeight:700
+                  <button onClick={() => { setShowQR(false); setPayState("idle"); }} style={{
+                    background:"none", border:"none", color:BRAND.subtle, fontSize:14, fontWeight:600, padding: "8px"
                   }}>Cancel</button>
                 </>
               )}
 
               {/* LOADING STATE */}
               {payState === "loading" && (
-                <div className="fade-in" style={{ padding: "40px 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <div className="fade-in" style={{ padding: "60px 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
                   <Spinner color={BRAND.primary} />
-                  <p style={{ marginTop: 24, fontSize: 16, fontWeight: 700, color: BRAND.dark }}>Verifying Payment...</p>
-                  <p style={{ marginTop: 6, fontSize: 13, color: BRAND.subtle, fontWeight: 500 }}>Awaiting bank confirmation.</p>
+                  <p style={{ marginTop: 24, fontSize: 16, fontWeight: 700, color: BRAND.dark }}>Verifying Webhook...</p>
+                  <p style={{ marginTop: 6, fontSize: 13, color: BRAND.subtle, fontWeight: 500 }}>Checking payment status with bank.</p>
                 </div>
               )}
 
               {/* SUCCESS STATE */}
               {payState === "success" && (
-                <div className="fade-up" style={{ padding: "20px 0" }}>
+                <div className="fade-up" style={{ padding: "40px 0 20px" }}>
                   <div style={{ color: "#10b981", marginBottom: 16, display: "flex", justifyContent: "center" }}>
                     <Icons.CheckCircle />
                   </div>
@@ -691,10 +704,10 @@ export default function App() {
                     setPayState("idle");
                     handleBook(); // Proceeds to the Booking Done screen
                   }} className="tap" style={{
-                    width: "100%", padding:"16px", borderRadius: 12, border:"none",
+                    width: "100%", padding:"16px", borderRadius: 14, border:"none",
                     background:BRAND.primary, color:"#fff", fontSize:15, fontWeight:800,
                     boxShadow: `0 8px 20px ${BRAND.primary}40`
-                  }}>Done</button>
+                  }}>Complete Booking</button>
                 </div>
               )}
 
@@ -710,7 +723,7 @@ export default function App() {
         <div style={{ marginBottom: 24, color: "#10b981" }}><Icons.CheckCircle /></div>
         <h2 style={{ fontSize:26, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Booking Done!</h2>
         <p style={{ color:BRAND.subtle, fontSize:15, fontWeight:500, textAlign:"center", marginBottom:40, lineHeight:1.6 }}>
-          Your {selProv?.category?.toLowerCase()} has been booked securely.
+          Your {selProv?.category?.toLowerCase()} has been secured and is on the way.
         </p>
         <button onClick={() => switchTab("history")} className="tap" style={{
           background: BRAND.primary, color:"#fff", border:"none", borderRadius: 14, padding:"16px 36px",
@@ -776,60 +789,13 @@ export default function App() {
                  <button onClick={() => handleComplete(b.id)} className="tap" style={{
                    background:"#f0fdf4", border:"1px solid #bbf7d0", color:"#166534", 
                    borderRadius: 8, padding:"8px 12px", fontSize:12, fontWeight:700, cursor:"pointer"
-                 }}>Complete</button>
-                 <button onClick={() => { setCancelId(b.id); setShowCancel(true); }} className="tap" style={{
-                   background:"#fef2f2", border:"1px solid #fecaca", color:"#991b1b", 
-                   borderRadius: 8, padding:"8px 12px", fontSize:12, fontWeight:700, cursor:"pointer"
-                 }}>Cancel</button>
+                 }}>Complete Job</button>
                </div>
             )}
           </div>
         </div>
       ))}
     </div>
-
-    {/* Cancel Modal */}
-    {showCancel && (
-      <div className="fade-in" style={{
-        position:"fixed", inset:0, background:"rgba(15,23,42,0.6)",
-        backdropFilter:"blur(6px)", zIndex:100,
-        display:"flex", alignItems:"flex-end", justifyContent:"center"
-      }}>
-        <div className="slide-up" style={{
-          background:"#fff", borderRadius:"24px 24px 0 0",
-          padding:"24px 24px 40px", width:"100%", maxWidth:430
-        }}>
-          <div style={{ width:40, height:5, background:"#cbd5e1", borderRadius:4, margin:"0 auto 24px" }} />
-          <h3 style={{ fontSize:20, fontWeight:800, color:BRAND.dark, marginBottom:6 }}>Cancel Booking</h3>
-          <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:24 }}>Please select a reason.</p>
-          
-          <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:32 }}>
-            {CANCEL_REASONS.map(r => (
-              <button key={r} onClick={() => setCancelReason(r)} style={{
-                padding:"16px", borderRadius: 12, textAlign:"left",
-                fontSize:14, fontWeight:600, cursor:"pointer",
-                border: cancelReason===r ? `1.5px solid ${BRAND.primary}` : `1px solid ${BRAND.border}`,
-                background: cancelReason===r ? BRAND.primaryLight : "#fff",
-                color: cancelReason===r ? BRAND.primary : BRAND.subtle,
-                transition: "all 0.2s"
-              }}>{r}</button>
-            ))}
-          </div>
-          
-          <div style={{ display:"flex", gap:12 }}>
-            <button onClick={() => { setShowCancel(false); setCancelReason(""); }} className="tap" style={{
-              flex:1, padding:"16px", borderRadius: 12, border:`1px solid ${BRAND.border}`,
-              background:"#fff", color:BRAND.dark, fontSize:15, fontWeight:700
-            }}>Back</button>
-            <button onClick={handleCancel} disabled={!cancelReason} className="tap" style={{
-              flex:1, padding:"16px", borderRadius: 12, border:"none",
-              background: cancelReason ? "#dc2626" : "#fca5a5",
-              color:"#fff", fontSize:15, fontWeight:700,
-            }}>Confirm</button>
-          </div>
-        </div>
-      </div>
-    )}
   </>);
 
   // ── PROFILE ───────────────────────────────────────────────────────────────
