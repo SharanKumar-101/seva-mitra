@@ -12,13 +12,13 @@ from fastapi.responses import FileResponse
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-SQLALCHEMY_DATABASE_URL = "postgresql+psycopg2://neondb_owner:npg_qUHxzDrTI38S@ep-proud-frost-amhto55t.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require"
+# SECURE: Pulling from environment variables, NOT hardcoded!
+SQLALCHEMY_DATABASE_URL = os.environ.get("DATABASE_URL")
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 # --- 2. Twilio Configuration ---
-# Remember to put your real credentials here!
 account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
 auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
 twilio_number = os.environ.get("TWILIO_PHONE_NUMBER") 
@@ -61,6 +61,13 @@ class Booking(Base):
     created_at = Column(DateTime, default=datetime.datetime.now)
     cancel_reason = Column(String, nullable=True)
 
+class Review(Base):
+    __tablename__ = "reviews"
+    id = Column(Integer, primary_key=True, index=True)
+    provider_id = Column(Integer)
+    rating = Column(Integer)
+    feedback = Column(String)
+
 Base.metadata.create_all(bind=engine)
 
 # --- 5. FastAPI App Initialization ---
@@ -75,7 +82,7 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory=UPLOAD_DIR), name="static")
 
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = "https://seva-mitra.onrender.com"
 
 def resolve_photo(p: Provider):
     url = p.photo_url or ""
@@ -83,7 +90,6 @@ def resolve_photo(p: Provider):
 
 # --- 6. Endpoints ---
 
-# Call Masking Feature
 @app.post("/initiate-call/")
 def initiate_call(data: dict):
     customer_phone = data.get("customer_phone")
@@ -106,7 +112,6 @@ def initiate_call(data: dict):
         print(f"Twilio Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Provider Management
 @app.get("/providers/")
 def get_providers():
     with get_db() as db:
@@ -171,7 +176,6 @@ def delete_provider(provider_id: int):
         db.delete(provider)
     return {"msg": "Provider deleted"}
 
-# Booking Management
 @app.get("/bookings/")
 def get_bookings():
     with get_db() as db:
@@ -183,7 +187,8 @@ def get_bookings():
                 "worker_name": p.name if p else "Unknown",
                 "category": p.category if p else "Service",
                 "time": b.created_at.isoformat(), "status": b.status,
-                "cancel_reason": b.cancel_reason
+                "cancel_reason": b.cancel_reason,
+                "provider_id": b.provider_id
             }
             for b, p in results
         ]
@@ -207,7 +212,6 @@ def cancel_booking(booking_id: int, reason_data: dict):
         booking.cancel_reason = reason_data.get("reason", "Not specified")
     return {"msg": "Booking cancelled"}
 
-# --- NEW ROUTE: Complete Booking ---
 @app.put("/bookings/{booking_id}/complete")
 def complete_booking(booking_id: int):
     with get_db() as db:
@@ -216,6 +220,16 @@ def complete_booking(booking_id: int):
             raise HTTPException(status_code=404, detail="Booking not found")
         booking.status = "Completed"
     return {"msg": "Booking successfully marked as Completed"}
+
+@app.post("/reviews/")
+def submit_review(data: dict):
+    with get_db() as db:
+        db.add(Review(
+            provider_id=data.get("provider_id"),
+            rating=data.get("rating"),
+            feedback=data.get("feedback", "")
+        ))
+    return {"msg": "Review submitted successfully"}
 
 # --- 7. SERVE FRONTEND ---
 DIST_DIR = os.path.join(os.getcwd(), "nyra-frontend", "dist")
