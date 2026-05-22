@@ -364,7 +364,7 @@ export default function App() {
       // 1. Get Order ID from our backend
       const res = await fetch(`${BASE_URL}/create-order/`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: 50 }) // 50 Rupees Booking Fee
+        body: JSON.stringify({ amount: 30 }) // 30 Rupees Booking Fee
       });
       const orderData = await res.json();
 
