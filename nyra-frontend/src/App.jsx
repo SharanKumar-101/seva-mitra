@@ -949,25 +949,32 @@ export default function App() {
             <>
               <div style={{ width:40, height:5, background:"#cbd5e1", borderRadius:4, margin:"0 auto 24px" }} />
               <h3 style={{ fontSize:20, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Complete & Settle</h3>
-              <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:16 }}>Please enter the final negotiated amount in your UPI app.</p>
+              <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:16 }}>
+                Securely pay the final amount to your service expert.
+              </p>
 
               <div style={{ background: "#fef2f2", border: "1px solid #fecaca", padding: "12px 16px", borderRadius: 12, marginBottom: 20, textAlign: "left", display: "flex", gap: 12, alignItems: "flex-start" }}>
                 <div style={{ color: "#dc2626", marginTop: 2 }}><Icons.ShieldAlert /></div>
                 <p style={{ fontSize: 13, color: "#991b1b", fontWeight: 600, lineHeight: 1.5, margin: 0 }}>
-                  <span style={{ fontWeight: 800 }}>WARNING:</span> Paying in cash instantly voids your 7-Day Free Recast Warranty. Pay via the app to stay protected.
+                  <span style={{ fontWeight: 800 }}>PROTECTION:</span> Paying through Sevamitra secures your 7-Day Warranty.
                 </p>
               </div>
 
-              <div style={{ background: BRAND.bg, padding: 16, borderRadius: 16, border: `1.5px solid ${BRAND.border}`, marginBottom: 24, display: "inline-block" }}>
-                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=upi://pay?pa=demo@ybl&pn=Sevamitra%20Demo%20(${encodeURIComponent(qrBooking?.worker_name)})&cu=INR`} alt="Demo Final Payment QR" style={{ width: 140, height: 140, borderRadius: 8 }} />
-              </div>
-
-              <a href={`upi://pay?pa=demo@ybl&pn=Sevamitra%20Demo%20(${encodeURIComponent(qrBooking?.worker_name)})&cu=INR`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: BRAND.dark, color: "#fff", textDecoration: "none", padding: "16px", borderRadius: 14, fontSize: 15, fontWeight: 700, marginBottom: 12, boxShadow: "0 4px 12px rgba(15, 23, 42, 0.15)" }}>
-                <Icons.Lightning /> Pay using UPI Apps
-              </a>
-
-              <button onClick={() => { setHistoryPayState("loading"); setTimeout(() => setHistoryPayState("success"), 2000); }} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:`1.5px solid ${BRAND.primary}`, background:BRAND.primaryLight, color:BRAND.primary, fontSize:15, fontWeight:700, marginBottom: 12 }}>I have paid, verify status</button>
-              <button onClick={() => { setShowHistoryQR(false); setHistoryPayState("idle"); }} style={{ background:"none", border:"none", color:BRAND.subtle, fontSize:14, fontWeight:600, padding: "8px" }}>Close</button>
+              {/* NEW: Professional Razorpay Button */}
+              <button onClick={() => {
+                  setHistoryPayState("loading");
+                  startRazorpayPayment(); 
+              }} className="tap" style={{
+                width: "100%", padding:"16px", borderRadius: 14, border:"none",
+                background:BRAND.primary, color:"#fff", fontSize:15, fontWeight:700, marginBottom: 12,
+                boxShadow: `0 8px 20px ${BRAND.primary}40`, display: "flex", alignItems: "center", justifyContent: "center", gap: 10
+              }}>
+                <Icons.Lightning /> Pay Final Amount via Razorpay
+              </button>
+              
+              <button onClick={() => { setShowHistoryQR(false); setHistoryPayState("idle"); }} style={{
+                background:"none", border:"none", color:BRAND.subtle, fontSize:14, fontWeight:600, padding: "8px"
+              }}>Close</button>
             </>
           )}
 
