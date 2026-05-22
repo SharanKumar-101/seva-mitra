@@ -369,8 +369,9 @@ export default function App() {
       const orderData = await res.json();
 
       // 2. Open Razorpay Window
+      // 2. Open Razorpay Window
       const options = {
-        key: "rzp_test_SsIEmLJ538aqEl", // ⚠️ Keep your rzp_test_ key here
+        key: "rzp_test_SsIEmLJ538aqEl", // ⚠️ Keep your actual rzp_test_ key here
         amount: orderData.amount,
         currency: orderData.currency,
         name: "Sevamitra",
@@ -385,11 +386,18 @@ export default function App() {
           contact: user.phone,
         },
         theme: { color: "#2563eb" },
-        // NEW: This forces Razorpay to only show UPI / QR options!
+        
+        // NEW SAFE CONFIG: Asks for UPI/QR first, but doesn't crash if it's missing!
         config: {
           display: {
-            hide: [{method: 'card'}, {method: 'netbanking'}, {method: 'wallet'}, {method: 'paylater'}],
-            preferences: { show_default_blocks: true }
+            blocks: {
+              upi: {
+                name: "Pay via UPI / QR Code",
+                instruments: [{ method: "upi" }]
+              }
+            },
+            sequence: ["block.upi"],
+            preferences: { show_default_blocks: true } // Keeps Cards as a backup so it never crashes
           }
         }
       };
