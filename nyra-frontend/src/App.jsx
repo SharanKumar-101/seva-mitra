@@ -281,6 +281,7 @@ export default function App() {
   const [showReview,   setShowReview]   = useState(false);
   const [reviewRating, setReviewRating] = useState(0);
   const [userLatLon,   setUserLatLon]   = useState(null); // GPS State
+  const [aadharStatus, setAadharStatus] = useState("Pending"); // "Pending", "Uploading", "Verified"
 
   useEffect(() => {
     const saved = localStorage.getItem("sevamitra_user");
@@ -369,7 +370,7 @@ export default function App() {
 
       // 2. Open Razorpay Window
       const options = {
-        key: "rzp_test_SsIEmLJ538aqEl", // ⚠️ PASTE YOUR rzp_test_ KEY ID HERE
+        key: "rzp_test_SsIEmLJ538aqEl", // ⚠️ Keep your rzp_test_ key here
         amount: orderData.amount,
         currency: orderData.currency,
         name: "Sevamitra",
@@ -383,7 +384,14 @@ export default function App() {
           name: user.name,
           contact: user.phone,
         },
-        theme: { color: "#2563eb" }
+        theme: { color: "#2563eb" },
+        // NEW: This forces Razorpay to only show UPI / QR options!
+        config: {
+          display: {
+            hide: [{method: 'card'}, {method: 'netbanking'}, {method: 'wallet'}, {method: 'paylater'}],
+            preferences: { show_default_blocks: true }
+          }
+        }
       };
 
       const rzp = new window.Razorpay(options);
@@ -469,14 +477,47 @@ export default function App() {
         </div>
         
         <div style={{ padding: 24 }}>
-          {/* KYC MOCK UI */}
+          {/* KYC MOCK UI WITH WORKING FILE UPLOAD */}
           <div className="fade-up" style={{ background: "#fff", padding: 20, borderRadius: 16, border: `1px solid ${BRAND.border}`, marginBottom: 24, boxShadow:"0 2px 8px rgba(0,0,0,0.02)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <h3 style={{ fontSize: 16, color: BRAND.dark, fontWeight: 800 }}>Aadhar KYC</h3>
-              <Badge status="Pending" />
+              <Badge status={aadharStatus === "Verified" ? "Completed" : "Pending"} />
             </div>
-            <p style={{ fontSize: 13, color: BRAND.subtle, marginBottom: 16, lineHeight: 1.5 }}>Required by admin to start accepting real jobs safely.</p>
-            <button className="tap" style={{ width: "100%", padding: 12, borderRadius: 10, border: `1.5px dashed ${BRAND.primary}`, background: BRAND.primaryLight, color: BRAND.primary, fontWeight: 700 }}>Upload Aadhar PDF</button>
+
+            <p style={{ fontSize: 13, color: BRAND.subtle, marginBottom: 16, lineHeight: 1.5 }}>
+              {aadharStatus === "Verified" 
+                ? "Identity verified successfully. You can now accept jobs." 
+                : "Required by admin to start accepting real jobs safely."}
+            </p>
+
+            {aadharStatus === "Pending" && (
+              <div>
+                 {/* Hidden File Input */}
+                 <input type="file" id="aadharUpload" accept=".pdf,image/*" style={{ display: "none" }} onChange={(e) => {
+                   if(e.target.files.length > 0) {
+                     setAadharStatus("Uploading");
+                     // Fake a 2.5 second network request to verify Aadhar
+                     setTimeout(() => setAadharStatus("Verified"), 2500); 
+                   }
+                 }} />
+                 {/* Styled Label acting as the button */}
+                 <label htmlFor="aadharUpload" className="tap" style={{ display: "block", textAlign: "center", width: "100%", padding: 12, borderRadius: 10, border: `1.5px dashed ${BRAND.primary}`, background: BRAND.primaryLight, color: BRAND.primary, fontWeight: 700, cursor: "pointer" }}>
+                   Select Aadhar File
+                 </label>
+              </div>
+            )}
+
+            {aadharStatus === "Uploading" && (
+               <div style={{ textAlign: "center", padding: "12px", color: BRAND.primary, fontWeight: 700, display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
+                  <Spinner color={BRAND.primary} /> Verifying with UIDAI Server...
+               </div>
+            )}
+
+            {aadharStatus === "Verified" && (
+               <div className="fade-in" style={{ textAlign: "center", padding: "12px", background: "#f0fdf4", color: "#166534", borderRadius: 10, fontWeight: 800, border: "1px solid #bbf7d0", display: "flex", justifyContent: "center", gap: 8 }}>
+                  <Icons.CheckSmall /> Aadhar Verified
+               </div>
+            )}
           </div>
 
           <h3 style={{ fontSize: 18, color: BRAND.dark, marginBottom: 16, fontWeight: 800 }}>Assigned Jobs</h3>
