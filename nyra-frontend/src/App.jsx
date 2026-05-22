@@ -941,51 +941,35 @@ export default function App() {
       </div>
     )}
 
-  {/* FINAL SETTLEMENT QR MODAL */}
+  {/* FINAL JOB COMPLETION MODAL */}
     {showHistoryQR && (
-      <div className="fade-in" style={{
-        position:"fixed", inset:0, background:"rgba(15,23,42,0.7)",
-        backdropFilter:"blur(8px)", zIndex:100,
-        display:"flex", alignItems:"flex-end", justifyContent:"center"
-      }}>
-        <div className="slide-up" style={{
-          background:"#fff", borderRadius:"24px 24px 0 0",
-          padding:"24px 24px 40px", width:"100%", maxWidth:430, textAlign: "center",
-          boxShadow: "0 -10px 40px rgba(0,0,0,0.15)"
-        }}>
-          <div style={{ width:40, height:5, background:"#cbd5e1", borderRadius:4, margin:"0 auto 24px" }} />
-          <h3 style={{ fontSize:20, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Final Settlement</h3>
-          <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:16 }}>
-            Please scan this QR to pay the negotiated amount.
-          </p>
-          
-          <div style={{ background: BRAND.bg, padding: 16, borderRadius: 16, border: `1.5px solid ${BRAND.border}`, marginBottom: 24, display: "inline-block" }}>
-            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=upi://pay?pa=demo@ybl&pn=Sevamitra%20Final%20Payment`} 
-                 alt="Final Payment QR" 
-                 style={{ width: 140, height: 140, borderRadius: 8 }} />
-          </div>
+      <div className="fade-in" style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.7)", backdropFilter:"blur(8px)", zIndex:100, display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
+        <div className="slide-up" style={{ background:"#fff", borderRadius:"24px 24px 0 0", padding:"24px 24px 40px", width:"100%", maxWidth:430, textAlign: "center", boxShadow: "0 -10px 40px rgba(0,0,0,0.15)" }}>
+          {historyPayState === "idle" && (
+            <>
+              <div style={{ width:40, height:5, background:"#cbd5e1", borderRadius:4, margin:"0 auto 24px" }} />
+              <h3 style={{ fontSize:20, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Complete & Settle</h3>
+              <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:16 }}>Please enter the final negotiated amount in your UPI app.</p>
 
-          <a href={`upi://pay?pa=demo@ybl&pn=Sevamitra%20Final%20Payment`} style={{
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            width: "100%", background: BRAND.dark, color: "#fff", textDecoration: "none",
-            padding: "16px", borderRadius: 14, fontSize: 15, fontWeight: 700, marginBottom: 12
-          }}>
-            <Icons.Lightning /> Pay using UPI Apps
-          </a>
+              <div style={{ background: "#fef2f2", border: "1px solid #fecaca", padding: "12px 16px", borderRadius: 12, marginBottom: 20, textAlign: "left", display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <div style={{ color: "#dc2626", marginTop: 2 }}><Icons.ShieldAlert /></div>
+                <p style={{ fontSize: 13, color: "#991b1b", fontWeight: 600, lineHeight: 1.5, margin: 0 }}>
+                  <span style={{ fontWeight: 800 }}>WARNING:</span> Paying in cash instantly voids your 7-Day Free Recast Warranty. Pay via the app to stay protected.
+                </p>
+              </div>
 
-          <button onClick={() => handleComplete(qrBooking.id)} className="tap" style={{
-            width: "100%", padding:"16px", borderRadius: 14, border:`1.5px solid ${BRAND.primary}`,
-            background:BRAND.primaryLight, color:BRAND.primary, fontSize:15, fontWeight:700, marginBottom: 12
-          }}>
-            I have paid, finish job
-          </button>
-          
-          <button onClick={() => { setShowHistoryQR(false); }} style={{
-            background:"none", border:"none", color:BRAND.subtle, fontSize:14, fontWeight:600, padding: "8px"
-          }}>Close</button>
-        </div>
-      </div>
-    )}
+              <div style={{ background: BRAND.bg, padding: 16, borderRadius: 16, border: `1.5px solid ${BRAND.border}`, marginBottom: 24, display: "inline-block" }}>
+                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=upi://pay?pa=demo@ybl&pn=Sevamitra%20Demo%20(${encodeURIComponent(qrBooking?.worker_name)})&cu=INR`} alt="Demo Final Payment QR" style={{ width: 140, height: 140, borderRadius: 8 }} />
+              </div>
+
+              <a href={`upi://pay?pa=demo@ybl&pn=Sevamitra%20Demo%20(${encodeURIComponent(qrBooking?.worker_name)})&cu=INR`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: BRAND.dark, color: "#fff", textDecoration: "none", padding: "16px", borderRadius: 14, fontSize: 15, fontWeight: 700, marginBottom: 12, boxShadow: "0 4px 12px rgba(15, 23, 42, 0.15)" }}>
+                <Icons.Lightning /> Pay using UPI Apps
+              </a>
+
+              <button onClick={() => { setHistoryPayState("loading"); setTimeout(() => setHistoryPayState("success"), 2000); }} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:`1.5px solid ${BRAND.primary}`, background:BRAND.primaryLight, color:BRAND.primary, fontSize:15, fontWeight:700, marginBottom: 12 }}>I have paid, verify status</button>
+              <button onClick={() => { setShowHistoryQR(false); setHistoryPayState("idle"); }} style={{ background:"none", border:"none", color:BRAND.subtle, fontSize:14, fontWeight:600, padding: "8px" }}>Close</button>
+            </>
+          )}
 
           {historyPayState === "loading" && (
             <div className="fade-in" style={{ padding: "60px 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
