@@ -803,7 +803,7 @@ export default function App() {
                   <div style={{ width:40, height:5, background:"#cbd5e1", borderRadius:4, margin:"0 auto 24px" }} />
                   <h3 style={{ fontSize:20, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Secure Booking</h3>
                   <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:24 }}>
-                    Pay a ₹50 verification fee to secure your expert now.
+                    Pay a ₹30 verification fee to secure your expert now.
                   </p>
 
                   <button onClick={startRazorpayPayment} className="tap" style={{
@@ -811,7 +811,7 @@ export default function App() {
                     background:BRAND.primary, color:"#fff", fontSize:15, fontWeight:700, marginBottom: 12,
                     boxShadow: `0 8px 20px ${BRAND.primary}40`, display: "flex", alignItems: "center", justifyContent: "center", gap: 10
                   }}>
-                    <Icons.Lightning /> Pay ₹50 Securely
+                    <Icons.Lightning /> Pay ₹30 Securely
                   </button>
                   
                   <button onClick={() => { setShowQR(false); setPayState("idle"); }} style={{
