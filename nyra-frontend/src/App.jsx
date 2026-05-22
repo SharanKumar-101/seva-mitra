@@ -941,7 +941,7 @@ export default function App() {
       </div>
     )}
 
-   {/* FINAL SETTLEMENT QR MODAL */}
+  {/* FINAL SETTLEMENT QR MODAL */}
     {showHistoryQR && (
       <div className="fade-in" style={{
         position:"fixed", inset:0, background:"rgba(15,23,42,0.7)",
