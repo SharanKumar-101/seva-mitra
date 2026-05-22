@@ -339,6 +339,67 @@ export default function App() {
     }
   };
 
+  // --- RAZORPAY INTEGRATION ---
+  const loadRazorpay = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const startRazorpayPayment = async () => {
+    setPayState("loading");
+    const isLoaded = await loadRazorpay();
+    if (!isLoaded) {
+      alert("Failed to load payment gateway.");
+      setPayState("idle");
+      return;
+    }
+
+    try {
+      // 1. Get Order ID from our backend
+      const res = await fetch(`${BASE_URL}/create-order/`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: 50 }) // 50 Rupees Booking Fee
+      });
+      const orderData = await res.json();
+
+      // 2. Open Razorpay Window
+      const options = {
+        key: "rzp_test_SsIEmLJ538aqEl", // ⚠️ PASTE YOUR rzp_test_ KEY ID HERE
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "Sevamitra",
+        description: `Booking Fee for ${selProv.category}`,
+        order_id: orderData.order_id,
+        handler: function (response) {
+          // Runs on success!
+          setPayState("success");
+        },
+        prefill: {
+          name: user.name,
+          contact: user.phone,
+        },
+        theme: { color: "#2563eb" }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', function (response){
+        alert("Payment Failed. Try again.");
+        setPayState("idle");
+      });
+      rzp.open();
+
+    } catch (error) {
+      console.error(error);
+      alert("Something went wrong initializing payment.");
+      setPayState("idle");
+    }
+  };
+
   const handleBook = async () => {
     setCallState("booking");
     const newBooking = { id: Date.now(), customer_phone: user.phone, worker_name: selProv.name, category: selProv.category, status: "Confirmed", time: new Date().toISOString() };
@@ -692,20 +753,21 @@ export default function App() {
                 <>
                   <div style={{ width:40, height:5, background:"#cbd5e1", borderRadius:4, margin:"0 auto 24px" }} />
                   <h3 style={{ fontSize:20, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Secure Booking</h3>
-                  <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:24 }}>Pay a small booking fee to secure your expert now.</p>
-                  
-                  <div style={{ background: BRAND.bg, padding: 16, borderRadius: 16, border: `1.5px solid ${BRAND.border}`, marginBottom: 24, display: "inline-block" }}>
-                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(upfrontUpiLink)}`} alt="Demo Payment QR" style={{ width: 140, height: 140, borderRadius: 8 }} />
-                  </div>
+                  <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:24 }}>
+                    Pay a ₹50 verification fee to secure your expert now.
+                  </p>
 
-                  <a href={upfrontUpiLink} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: BRAND.dark, color: "#fff", textDecoration: "none", padding: "16px", borderRadius: 14, fontSize: 15, fontWeight: 700, marginBottom: 12, boxShadow: "0 4px 12px rgba(15, 23, 42, 0.15)" }}>
-                    <Icons.Lightning /> Pay using UPI Apps
-                  </a>
-
-                  <button onClick={() => { setPayState("loading"); setTimeout(() => setPayState("success"), 2000); }} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:`1.5px solid ${BRAND.primary}`, background:BRAND.primaryLight, color:BRAND.primary, fontSize:15, fontWeight:700, marginBottom: 12 }}>
-                    I have paid, verify status
+                  <button onClick={startRazorpayPayment} className="tap" style={{
+                    width: "100%", padding:"16px", borderRadius: 14, border:"none",
+                    background:BRAND.primary, color:"#fff", fontSize:15, fontWeight:700, marginBottom: 12,
+                    boxShadow: `0 8px 20px ${BRAND.primary}40`, display: "flex", alignItems: "center", justifyContent: "center", gap: 10
+                  }}>
+                    <Icons.Lightning /> Pay ₹50 Securely
                   </button>
-                  <button onClick={() => { setShowQR(false); setPayState("idle"); }} style={{ background:"none", border:"none", color:BRAND.subtle, fontSize:14, fontWeight:600, padding: "8px" }}>Cancel</button>
+                  
+                  <button onClick={() => { setShowQR(false); setPayState("idle"); }} style={{
+                    background:"none", border:"none", color:BRAND.subtle, fontSize:14, fontWeight:600, padding: "8px"
+                  }}>Cancel</button>
                 </>
               )}
 
