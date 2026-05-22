@@ -5,3 +5,4 @@ twilio==9.10.5
 python-multipart==0.0.22
 psycopg2-binary
 razorpay==1.4.1
+setuptools
