@@ -1,5 +1,5 @@
 import os, shutil, uuid, datetime
-import razorpay # NEW: Razorpay library
+import razorpay  # NEW: Razorpay library
 from fastapi import FastAPI, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -21,7 +21,7 @@ Base = declarative_base()
 # --- 2. Twilio Configuration ---
 account_sid = os.environ.get("TWILIO_ACCOUNT_SID")
 auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
-twilio_number = os.environ.get("TWILIO_PHONE_NUMBER") 
+twilio_number = os.environ.get("TWILIO_PHONE_NUMBER")
 client = Client(account_sid, auth_token) if account_sid and auth_token else None
 
 # --- 2.5 Razorpay Configuration ---
@@ -75,6 +75,19 @@ class Review(Base):
     rating = Column(Integer)
     feedback = Column(String)
 
+class BookingSession(Base):
+    __tablename__ = "booking_sessions"
+    id = Column(Integer, primary_key=True, index=True)
+    customer_phone = Column(String)
+    status = Column(String, default="searching")
+    attempts_left = Column(Integer, default=3)
+
+class Wallet(Base):
+    __tablename__ = "wallets"
+    id = Column(Integer, primary_key=True, index=True)
+    phone = Column(String, unique=True)
+    balance = Column(Integer, default=0)
+
 Base.metadata.create_all(bind=engine)
 
 # --- 5. FastAPI App Initialization ---
@@ -97,9 +110,18 @@ def resolve_photo(p: Provider):
 # --- 6. Endpoints ---
 @app.post("/create-order/")
 def create_order(data: dict):
-    amount = data.get("amount", 50) * 100 # Razorpay requires paise (50 rupees = 5000 paise)
+    amount = data.get("amount")
+    if amount is None:
+        raise HTTPException(status_code=400, detail="Amount is required")
+
+    try:
+        amount = int(float(amount) * 100)  # Convert rupees to paise
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Amount must be a valid number")
+
     if not rzp_client:
         raise HTTPException(status_code=500, detail="Razorpay not configured on server.")
+
     try:
         order_data = {"amount": amount, "currency": "INR", "payment_capture": "1"}
         order = rzp_client.order.create(data=order_data)
@@ -130,50 +152,154 @@ def initiate_call(data: dict):
 def get_providers():
     with get_db() as db:
         data = db.query(Provider).all()
-        return [{"id": p.id, "name": p.name, "category": p.category, "phone": p.phone, "location": p.location, "photo_url": resolve_photo(p), "experience": p.experience, "rating": p.rating, "base_price": p.base_price} for p in data]
+        return [
+            {
+                "id": p.id,
+                "name": p.name,
+                "category": p.category,
+                "phone": p.phone,
+                "location": p.location,
+                "photo_url": resolve_photo(p),
+                "experience": p.experience,
+                "rating": p.rating,
+                "base_price": p.base_price
+            }
+            for p in data
+        ]
 
 @app.post("/providers/")
-def create_provider(name: str = Form(...), category: str = Form(...), phone: str = Form(...), location: str = Form(...), experience: int = Form(...), rating: str = Form(...), base_price: int = Form(...), photo_url: str = Form(None)):
+def create_provider(
+    name: str = Form(...),
+    category: str = Form(...),
+    phone: str = Form(...),
+    location: str = Form(...),
+    experience: int = Form(...),
+    rating: str = Form(...),
+    base_price: int = Form(...),
+    photo_url: str = Form(None)
+):
     with get_db() as db:
-        db.add(Provider(name=name, category=category, phone=phone, location=location, photo_url=photo_url, experience=experience, rating=rating, base_price=base_price))
+        db.add(
+            Provider(
+                name=name,
+                category=category,
+                phone=phone,
+                location=location,
+                photo_url=photo_url,
+                experience=experience,
+                rating=rating,
+                base_price=base_price
+            )
+        )
     return {"msg": "Provider created"}
 
 @app.put("/providers/{provider_id}")
-def update_provider(provider_id: int, name: str = Form(...), category: str = Form(...), phone: str = Form(...), location: str = Form(...), experience: int = Form(...), rating: str = Form(...), base_price: int = Form(...), photo_url: str = Form(None)):
+def update_provider(
+    provider_id: int,
+    name: str = Form(...),
+    category: str = Form(...),
+    phone: str = Form(...),
+    location: str = Form(...),
+    experience: int = Form(...),
+    rating: str = Form(...),
+    base_price: int = Form(...),
+    photo_url: str = Form(None)
+):
     with get_db() as db:
         provider = db.query(Provider).filter(Provider.id == provider_id).first()
-        if not provider: raise HTTPException(status_code=404, detail="Provider not found")
+        if not provider:
+            raise HTTPException(status_code=404, detail="Provider not found")
         provider.name, provider.category, provider.phone = name, category, phone
         provider.location, provider.experience, provider.rating = location, experience, rating
         provider.base_price = base_price
-        if photo_url: provider.photo_url = photo_url
+        if photo_url:
+            provider.photo_url = photo_url
     return {"msg": "Provider updated"}
 
 @app.delete("/providers/{provider_id}")
 def delete_provider(provider_id: int):
     with get_db() as db:
         provider = db.query(Provider).filter(Provider.id == provider_id).first()
-        if not provider: raise HTTPException(status_code=404, detail="Provider not found")
+        if not provider:
+            raise HTTPException(status_code=404, detail="Provider not found")
         db.delete(provider)
     return {"msg": "Provider deleted"}
 
 @app.get("/bookings/")
 def get_bookings():
     with get_db() as db:
-        results = db.query(Booking, Provider).outerjoin(Provider, Booking.provider_id == Provider.id).all()
-        return [{"id": b.id, "customer_name": b.customer_name, "customer_phone": b.customer_phone, "worker_name": p.name if p else "Unknown", "category": p.category if p else "Service", "time": b.created_at.isoformat(), "status": b.status, "cancel_reason": b.cancel_reason, "provider_id": b.provider_id} for b, p in results]
+        results = db.query(Booking, Provider).outerjoin(
+            Provider, Booking.provider_id == Provider.id
+        ).all()
+        return [
+            {
+                "id": b.id,
+                "customer_name": b.customer_name,
+                "customer_phone": b.customer_phone,
+                "worker_name": p.name if p else "Unknown",
+                "category": p.category if p else "Service",
+                "time": b.created_at.isoformat(),
+                "status": b.status,
+                "cancel_reason": b.cancel_reason,
+                "provider_id": b.provider_id
+            }
+            for b, p in results
+        ]
 
 @app.post("/bookings/")
 def make_booking(data: dict):
     with get_db() as db:
-        db.add(Booking(customer_name=data.get("customer_name", ""), customer_phone=data.get("customer_phone", ""), provider_id=data.get("provider_id")))
+        db.add(
+            Booking(
+                customer_name=data.get("customer_name", ""),
+                customer_phone=data.get("customer_phone", ""),
+                provider_id=data.get("provider_id")
+            )
+        )
     return {"msg": "Booking confirmed"}
+
+@app.post("/bookings/{booking_id}/settle")
+def settle_booking(booking_id: int, data: dict):
+    if data.get("final_bill_amount", 0) < 150:
+        raise HTTPException(
+            status_code=400,
+            detail="Minimum base price is ₹150"
+        )
+
+    with get_db() as db:
+        booking = db.query(Booking).filter(Booking.id == booking_id).first()
+        if not booking:
+            raise HTTPException(status_code=404, detail="Booking not found")
+
+        provider = db.query(Provider).filter(
+            Provider.id == booking.provider_id
+        ).first()
+        if not provider:
+            raise HTTPException(status_code=404, detail="Provider not found")
+
+        wallet = db.query(Wallet).filter(
+            Wallet.phone == provider.phone
+        ).first()
+
+        if not wallet:
+            wallet = Wallet(phone=provider.phone, balance=0)
+            db.add(wallet)
+
+        wallet.balance += 10
+        booking.status = "Completed"
+
+    return {
+        "msg": "Booking settled successfully",
+        "provider_bonus": 10,
+        "provider_wallet_balance": wallet.balance
+    }
 
 @app.put("/bookings/{booking_id}/cancel")
 def cancel_booking(booking_id: int, reason_data: dict):
     with get_db() as db:
         booking = db.query(Booking).filter(Booking.id == booking_id).first()
-        if not booking: raise HTTPException(status_code=404, detail="Booking not found")
+        if not booking:
+            raise HTTPException(status_code=404, detail="Booking not found")
         booking.status = "Cancelled"
         booking.cancel_reason = reason_data.get("reason", "Not specified")
     return {"msg": "Booking cancelled"}
@@ -182,20 +308,32 @@ def cancel_booking(booking_id: int, reason_data: dict):
 def complete_booking(booking_id: int):
     with get_db() as db:
         booking = db.query(Booking).filter(Booking.id == booking_id).first()
-        if not booking: raise HTTPException(status_code=404, detail="Booking not found")
+        if not booking:
+            raise HTTPException(status_code=404, detail="Booking not found")
         booking.status = "Completed"
     return {"msg": "Booking successfully marked as Completed"}
 
 @app.post("/reviews/")
 def submit_review(data: dict):
     with get_db() as db:
-        db.add(Review(provider_id=data.get("provider_id"), rating=data.get("rating"), feedback=data.get("feedback", "")))
+        db.add(
+            Review(
+                provider_id=data.get("provider_id"),
+                rating=data.get("rating"),
+                feedback=data.get("feedback", "")
+            )
+        )
     return {"msg": "Review submitted successfully"}
 
 # --- 7. SERVE FRONTEND ---
 DIST_DIR = os.path.join(os.getcwd(), "nyra-frontend", "dist")
 if os.path.exists(DIST_DIR):
-    app.mount("/assets", StaticFiles(directory=os.path.join(DIST_DIR, "assets")), name="assets")
+    app.mount(
+        "/assets",
+        StaticFiles(directory=os.path.join(DIST_DIR, "assets")),
+        name="assets"
+    )
+
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
         return FileResponse(os.path.join(DIST_DIR, "index.html"))
