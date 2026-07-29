@@ -120,12 +120,23 @@ def create_order(data: dict):
         raise HTTPException(status_code=400, detail="Amount must be a valid number")
 
     if not rzp_client:
-        raise HTTPException(status_code=500, detail="Razorpay not configured on server.")
+        raise HTTPException(
+            status_code=500,
+            detail="Razorpay not configured on server."
+        )
 
     try:
-        order_data = {"amount": amount, "currency": "INR", "payment_capture": "1"}
+        order_data = {
+            "amount": amount,
+            "currency": "INR",
+            "payment_capture": "1"
+        }
         order = rzp_client.order.create(data=order_data)
-        return {"order_id": order["id"], "amount": amount, "currency": "INR"}
+        return {
+            "order_id": order["id"],
+            "amount": amount,
+            "currency": "INR"
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -135,12 +146,16 @@ def initiate_call(data: dict):
     provider_phone = data.get("provider_phone")
     if not customer_phone or not provider_phone:
         raise HTTPException(status_code=400, detail="Missing phone numbers")
+
     try:
         if client:
             call = client.calls.create(
                 to=customer_phone,
                 from_=twilio_number,
-                twiml=f'<Response><Say>Connecting you to Sevamitra Professional.</Say><Dial>{provider_phone}</Dial></Response>'
+                twiml=(
+                    "<Response><Say>Connecting you to Sevamitra Professional."
+                    f"</Say><Dial>{provider_phone}</Dial></Response>"
+                )
             )
             return {"msg": "Call initiated", "sid": call.sid}
         else:
@@ -206,31 +221,48 @@ def update_provider(
     photo_url: str = Form(None)
 ):
     with get_db() as db:
-        provider = db.query(Provider).filter(Provider.id == provider_id).first()
+        provider = db.query(Provider).filter(
+            Provider.id == provider_id
+        ).first()
+
         if not provider:
             raise HTTPException(status_code=404, detail="Provider not found")
+
         provider.name, provider.category, provider.phone = name, category, phone
-        provider.location, provider.experience, provider.rating = location, experience, rating
+        provider.location, provider.experience, provider.rating = (
+            location,
+            experience,
+            rating
+        )
         provider.base_price = base_price
+
         if photo_url:
             provider.photo_url = photo_url
+
     return {"msg": "Provider updated"}
 
 @app.delete("/providers/{provider_id}")
 def delete_provider(provider_id: int):
     with get_db() as db:
-        provider = db.query(Provider).filter(Provider.id == provider_id).first()
+        provider = db.query(Provider).filter(
+            Provider.id == provider_id
+        ).first()
+
         if not provider:
             raise HTTPException(status_code=404, detail="Provider not found")
+
         db.delete(provider)
+
     return {"msg": "Provider deleted"}
 
 @app.get("/bookings/")
 def get_bookings():
     with get_db() as db:
         results = db.query(Booking, Provider).outerjoin(
-            Provider, Booking.provider_id == Provider.id
+            Provider,
+            Booking.provider_id == Provider.id
         ).all()
+
         return [
             {
                 "id": b.id,
@@ -256,16 +288,11 @@ def make_booking(data: dict):
                 provider_id=data.get("provider_id")
             )
         )
+
     return {"msg": "Booking confirmed"}
 
 @app.post("/bookings/{booking_id}/settle")
 def settle_booking(booking_id: int, data: dict):
-    if data.get("final_bill_amount", 0) < 150:
-        raise HTTPException(
-            status_code=400,
-            detail="Minimum base price is ₹150"
-        )
-
     with get_db() as db:
         booking = db.query(Booking).filter(Booking.id == booking_id).first()
         if not booking:
@@ -276,6 +303,13 @@ def settle_booking(booking_id: int, data: dict):
         ).first()
         if not provider:
             raise HTTPException(status_code=404, detail="Provider not found")
+            
+        min_price = provider.base_price if provider.base_price else 0
+        if data.get("final_bill_amount", 0) < min_price:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Minimum base price is ₹{min_price}"
+            )
 
         wallet = db.query(Wallet).filter(
             Wallet.phone == provider.phone
@@ -297,20 +331,30 @@ def settle_booking(booking_id: int, data: dict):
 @app.put("/bookings/{booking_id}/cancel")
 def cancel_booking(booking_id: int, reason_data: dict):
     with get_db() as db:
-        booking = db.query(Booking).filter(Booking.id == booking_id).first()
+        booking = db.query(Booking).filter(
+            Booking.id == booking_id
+        ).first()
+
         if not booking:
             raise HTTPException(status_code=404, detail="Booking not found")
+
         booking.status = "Cancelled"
         booking.cancel_reason = reason_data.get("reason", "Not specified")
+
     return {"msg": "Booking cancelled"}
 
 @app.put("/bookings/{booking_id}/complete")
 def complete_booking(booking_id: int):
     with get_db() as db:
-        booking = db.query(Booking).filter(Booking.id == booking_id).first()
+        booking = db.query(Booking).filter(
+            Booking.id == booking_id
+        ).first()
+
         if not booking:
             raise HTTPException(status_code=404, detail="Booking not found")
+
         booking.status = "Completed"
+
     return {"msg": "Booking successfully marked as Completed"}
 
 @app.post("/reviews/")
@@ -323,10 +367,12 @@ def submit_review(data: dict):
                 feedback=data.get("feedback", "")
             )
         )
+
     return {"msg": "Review submitted successfully"}
 
 # --- 7. SERVE FRONTEND ---
 DIST_DIR = os.path.join(os.getcwd(), "nyra-frontend", "dist")
+
 if os.path.exists(DIST_DIR):
     app.mount(
         "/assets",
