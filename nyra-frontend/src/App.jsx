@@ -300,6 +300,7 @@ function statusLabel(status, t) {
     Pending: t.statusPending,
     Cancelled: t.statusCancelled,
     Accepted: "Accepted",
+    "Payment Pending": "Payment Pending",
   };
   return map[status] || status;
 }
@@ -572,6 +573,7 @@ export default function App() {
   const [aadharStatus, setAadharStatus] = useState("Pending"); // "Pending", "Uploading", "Verified"
   const [hasPaidSession, setHasPaidSession] = useState(() => localStorage.getItem("sevamitra_session") === "true");
   const [showTerms, setShowTerms] = useState(false);
+  const [invoiceModalBooking, setInvoiceModalBooking] = useState(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("sevamitra_user");
@@ -708,7 +710,7 @@ export default function App() {
     }
   };
 
-  const startFinalRazorpayPayment = async () => {
+  const startFinalRazorpayPayment = async (finalAmount, bookingId) => {
     setHistoryPayState("loading");
     const isLoaded = await loadRazorpay();
     if (!isLoaded) {
@@ -718,13 +720,10 @@ export default function App() {
     }
 
     try {
-      const assignedProv = providers.find(p => p.id === qrBooking?.provider_id);
-      const minPrice = assignedProv ? assignedProv.base_price : 150;
-
       const res = await fetch(`${BASE_URL}/create-order/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: minPrice })
+        body: JSON.stringify({ amount: finalAmount })
       });
       const orderData = await res.json();
 
@@ -733,10 +732,17 @@ export default function App() {
         amount: orderData.amount,
         currency: orderData.currency,
         name: "Sevamitra Final Settlement",
-        description: `Payment to ${qrBooking?.worker_name}`,
+        description: "Sevamitra final settlement",
         order_id: orderData.order_id,
-        handler: function () {
+        handler: async function () {
+          const settlementResponse = await fetch(`${BASE_URL}/bookings/${bookingId}/settle`, {
+            method: "POST"
+          });
+          if (!settlementResponse.ok) {
+            throw new Error("Settlement failed");
+          }
           setHistoryPayState("success");
+          fetchData();
         },
         prefill: { name: user.name, contact: user.phone },
         theme: { color: "#10b981" }
@@ -885,11 +891,24 @@ export default function App() {
               </div>
               {b.status === "Confirmed" && (
                 <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-                  <button onClick={() => setBookings(prev => prev.map(job => job.id === b.id ? { ...job, status: "Accepted" } : job))} className="tap" style={{ flex: 1, padding: "10px", background: "#10b981", color: "#fff", borderRadius: 10, border: "none", fontWeight: 700 }}>Accept Job</button>
+                  <button onClick={async () => {
+                    await fetch(`${BASE_URL}/bookings/${b.id}/accept`, { method: "PUT" });
+                    fetchData();
+                  }} className="tap" style={{ flex: 1, padding: "10px", background: "#10b981", color: "#fff", borderRadius: 10, border: "none", fontWeight: 700 }}>Accept Job</button>
                   <button onClick={async () => {
                     await fetch(`${BASE_URL}/bookings/${b.id}/cancel`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason: "Provider unavailable" }) });
-                    setBookings(prev => prev.map(job => job.id === b.id ? { ...job, status: "Cancelled" } : job));
+                    fetchData();
                   }} className="tap" style={{ flex: 1, padding: "10px", background: "#ef4444", color: "#fff", borderRadius: 10, border: "none", fontWeight: 700 }}>Decline</button>
+                </div>
+              )}
+              {b.status === "Accepted" && (
+                <button onClick={() => { setInvoiceModalBooking(b); setFinalBill(""); setBillError(""); }} className="tap" style={{ width: "100%", padding: "12px", marginTop: 16, background: BRAND.primary, color: "#fff", borderRadius: 10, border: "none", fontWeight: 700 }}>
+                  Job Done? Create Invoice
+                </button>
+              )}
+              {b.status === "Payment Pending" && (
+                <div style={{ marginTop: 16, fontSize: 13, color: BRAND.primary, fontWeight: 700, textAlign: "center", padding: "10px", background: BRAND.primaryLight, borderRadius: 10 }}>
+                  Waiting for customer to pay ₹{b.final_amount}...
                 </div>
               )}
             </div>
@@ -1263,9 +1282,14 @@ export default function App() {
             
             {b.status === "Confirmed" && (
                <div style={{ display: "flex", gap: 8 }}>
-                 <button onClick={() => { setQrBooking(b); setShowHistoryQR(true); setHistoryPayState("idle"); }} className="tap" style={{ background:"#f0fdf4", border:"1px solid #bbf7d0", color:"#166534", borderRadius: 8, padding:"8px 12px", fontSize:12, fontWeight:700, cursor:"pointer" }}>{t.completeJob}</button>
                  <button onClick={() => { setCancelId(b.id); setShowCancel(true); }} className="tap" style={{ background:"#fef2f2", border:"1px solid #fecaca", color:"#991b1b", borderRadius: 8, padding:"8px 12px", fontSize:12, fontWeight:700, cursor:"pointer" }}>{t.cancelBooking}</button>
                </div>
+            )}
+
+            {b.status === "Payment Pending" && (
+               <button onClick={() => startFinalRazorpayPayment(b.final_amount, b.id)} className="tap" style={{ background: BRAND.primary, border:"none", color:"#fff", borderRadius: 8, padding:"8px 12px", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                 Pay ₹{b.final_amount} via Razorpay
+               </button>
             )}
             
             {b.status === "Completed" && (
@@ -1300,8 +1324,34 @@ export default function App() {
       </div>
     )}
 
-  {/* FINAL JOB COMPLETION MODAL */}
-    {showHistoryQR && (
+    {invoiceModalBooking && (
+      <div className="fade-in" style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.7)", backdropFilter:"blur(8px)", zIndex:100, display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
+        <div className="slide-up" style={{ background:"#fff", borderRadius:"24px 24px 0 0", padding:"24px 24px 40px", width:"100%", maxWidth:430, textAlign: "center", boxShadow: "0 -10px 40px rgba(0,0,0,0.15)" }}>
+          <div style={{ width:40, height:5, background:"#cbd5e1", borderRadius:4, margin:"0 auto 24px" }} />
+          <h3 style={{ fontSize:20, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Send Final Invoice</h3>
+          <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:16 }}>Enter the final amount. The customer will pay this securely via Razorpay.</p>
+          {billError && <div style={{ color: "#dc2626", fontSize: 13, fontWeight: 600, marginBottom: 12, background: "#fef2f2", padding: "8px", borderRadius: "8px", border: "1px solid #fecaca" }}>{billError}</div>}
+          <input type="number" placeholder="Final Amount" value={finalBill} onChange={(e) => setFinalBill(e.target.value)} style={{ width: "100%", padding: "16px", borderRadius: 12, border: `1px solid ${BRAND.border}`, fontSize: 16, outline: "none", marginBottom: 16, fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: "700" }} />
+          <button onClick={async () => {
+            const amount = parseInt(finalBill, 10);
+            const assignedProv = providers.find(p => p.id === invoiceModalBooking.provider_id);
+            const minPrice = assignedProv ? assignedProv.base_price : 150;
+            if (!amount || amount < minPrice) { setBillError(`Minimum bill is ₹${minPrice}`); return; }
+            setBillError("");
+            try {
+              const response = await fetch(`${BASE_URL}/bookings/${invoiceModalBooking.id}/invoice`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ final_amount: amount }) });
+              if (!response.ok) throw new Error("Invoice failed");
+              fetchData();
+              setInvoiceModalBooking(null);
+            } catch (e) { setBillError("Server error."); }
+          }} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:"none", background:BRAND.primary, color:"#fff", fontSize:15, fontWeight:700 }}>Send to Customer</button>
+          <button onClick={() => setInvoiceModalBooking(null)} style={{ background:"none", border:"none", color:BRAND.subtle, fontSize:14, fontWeight:600, padding: "12px", marginTop: 8 }}>Cancel</button>
+        </div>
+      </div>
+    )}
+
+  {/* Legacy final-completion modal retained but disabled; invoices now drive settlement. */}
+    {false && showHistoryQR && (
       <div className="fade-in" style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.7)", backdropFilter:"blur(8px)", zIndex:100, display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
         <div className="slide-up" style={{ background:"#fff", borderRadius:"24px 24px 0 0", padding:"24px 24px 40px", width:"100%", maxWidth:430, textAlign: "center", boxShadow: "0 -10px 40px rgba(0,0,0,0.15)" }}>
           {historyPayState === "idle" && (() => {
@@ -1358,7 +1408,7 @@ export default function App() {
                       <span style={{ fontWeight: 800 }}>{t.warning}</span> {t.cashWarning}
                     </p>
                   </div>
-                  <button onClick={startFinalRazorpayPayment} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:`1.5px solid ${BRAND.primary}`, background:BRAND.primaryLight, color:BRAND.primary, fontSize:15, fontWeight:700, marginBottom: 12 }}>
+                  <button onClick={() => { setHistoryPayState("loading"); setTimeout(() => setHistoryPayState("success"), 2000); }} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:`1.5px solid ${BRAND.primary}`, background:BRAND.primaryLight, color:BRAND.primary, fontSize:15, fontWeight:700, marginBottom: 12 }}>
                     Pay Securely to Activate Warranty
                   </button>
                 </>
@@ -1446,7 +1496,7 @@ export default function App() {
           { label: t.termsOfService },
           { label: t.aboutSevamitra },
         ].map((item, i, arr) => (
-          <button key={item.label} onClick={() => item.label === t.termsOfService ? setShowTerms(true) : null} className="tap" style={{ width:"100%", padding:"20px 24px", background:"none", border:"none", borderBottom:i<arr.length-1?`1px solid ${BRAND.border}`:"none", display:"flex", justifyContent:"space-between", alignItems:"center", color:BRAND.dark, fontSize: 15, fontWeight: 600 }}>
+          <button key={item.label} onClick={() => i === 1 ? setShowTerms(true) : null} className="tap" style={{ width:"100%", padding:"20px 24px", background:"none", border:"none", borderBottom:i<arr.length-1?`1px solid ${BRAND.border}`:"none", display:"flex", justifyContent:"space-between", alignItems:"center", color:BRAND.dark, fontSize: 15, fontWeight: 600 }}>
             {item.label}
             <span style={{ color:"#94a3b8" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg></span>
           </button>
