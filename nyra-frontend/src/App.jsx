@@ -100,8 +100,8 @@ const translations = {
     confirmToBook: "Confirm to Book",
     callAgain: "Call Again",
     secureBooking: "Secure Booking",
-    pay30Fee: "Pay a ₹30 verification fee to secure your expert now.",
-    pay30Securely: "Pay ₹30 Securely",
+    pay30Fee: "Pay a ₹40 verification fee to secure your expert now.",
+    pay30Securely: "Pay ₹40 Securely",
     cancel: "Cancel",
     verifyingWebhook: "Verifying Webhook...",
     checkingPaymentBank: "Checking payment status with bank.",
@@ -215,8 +215,8 @@ const translations = {
     confirmToBook: "ಬುಕ್ ಮಾಡಲು ದೃಢೀಕರಿಸಿ",
     callAgain: "ಮತ್ತೆ ಕಾಲ್ ಮಾಡಿ",
     secureBooking: "ಸುರಕ್ಷಿತ ಬುಕಿಂಗ್",
-    pay30Fee: "ನಿಮ್ಮ ತಜ್ಞರನ್ನು ಈಗ ಖಚಿತಪಡಿಸಲು ₹30 ಪರಿಶೀಲನಾ ಶುಲ್ಕ ಪಾವತಿಸಿ.",
-    pay30Securely: "₹30 ಸುರಕ್ಷಿತವಾಗಿ ಪಾವತಿಸಿ",
+    pay30Fee: "ನಿಮ್ಮ ತಜ್ಞರನ್ನು ಈಗ ಖಚಿತಪಡಿಸಲು ₹40 ಪರಿಶೀಲನಾ ಶುಲ್ಕ ಪಾವತಿಸಿ.",
+    pay30Securely: "₹40 ಸುರಕ್ಷಿತವಾಗಿ ಪಾವತಿಸಿ",
     cancel: "ರದ್ದು",
     verifyingWebhook: "ವೆಬ್‌ಹುಕ್ ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ...",
     checkingPaymentBank: "ಬ್ಯಾಂಕ್‌ನೊಂದಿಗೆ ಪಾವತಿ ಸ್ಥಿತಿ ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ.",
@@ -565,6 +565,8 @@ export default function App() {
   const [qrBooking,    setQrBooking]    = useState(null);
   const [showReview,   setShowReview]   = useState(false);
   const [reviewRating, setReviewRating] = useState(0);
+  const [finalBill, setFinalBill] = useState("");
+  const [billError, setBillError] = useState("");
   const [userLatLon,   setUserLatLon]   = useState(null); // GPS State
   const [aadharStatus, setAadharStatus] = useState("Pending"); // "Pending", "Uploading", "Verified"
 
@@ -649,7 +651,7 @@ export default function App() {
       // 1. Get Order ID from our backend
       const res = await fetch(`${BASE_URL}/create-order/`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: 30 }) // 30 Rupees Booking Fee
+        body: JSON.stringify({ amount: 40 }) // 40 Rupees Booking Fee
       });
       const orderData = await res.json();
 
@@ -1233,34 +1235,67 @@ export default function App() {
           {historyPayState === "idle" && (
             <>
               <div style={{ width:40, height:5, background:"#cbd5e1", borderRadius:4, margin:"0 auto 24px" }} />
-              <h3 style={{ fontSize:20, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>{t.completeAndSettle}</h3>
-              <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:16 }}>{t.enterFinalAmount}</p>
+              <h3 style={{ fontSize:20, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>
+                {user.role === "provider" ? "Settle Job & Claim Bonus" : t.completeAndSettle}
+              </h3>
 
-              <div style={{ background: "#fef2f2", border: "1px solid #fecaca", padding: "12px 16px", borderRadius: 12, marginBottom: 20, textAlign: "left", display: "flex", gap: 12, alignItems: "flex-start" }}>
-                <div style={{ color: "#dc2626", marginTop: 2 }}><Icons.ShieldAlert /></div>
-                <p style={{ fontSize: 13, color: "#991b1b", fontWeight: 600, lineHeight: 1.5, margin: 0 }}>
-                  <span style={{ fontWeight: 800 }}>{t.warning}</span> {t.cashWarning}
-                </p>
-              </div>
+              {user.role === "provider" ? (
+                <div style={{ textAlign: "left", marginBottom: 24 }}>
+                  <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:16 }}>
+                    Enter the final negotiated bill amount. Minimum base price is ₹150. You will receive a ₹10 bonus in your wallet upon completion.
+                  </p>
+                  {billError && <div style={{ color: "#dc2626", fontSize: 13, fontWeight: 600, marginBottom: 12, background: "#fef2f2", padding: "8px", borderRadius: "8px", border: "1px solid #fecaca" }}>{billError}</div>}
+                  <input
+                    type="number"
+                    placeholder="Enter amount (e.g., 200)"
+                    value={finalBill}
+                    onChange={(e) => setFinalBill(e.target.value)}
+                    style={{ width: "100%", padding: "16px", borderRadius: 12, border: `1px solid ${BRAND.border}`, fontSize: 16, outline: "none", marginBottom: 16, fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: "700" }}
+                  />
+                  <button onClick={async () => {
+                    const amount = parseInt(finalBill, 10);
+                    if (!amount || amount < 150) { setBillError("Error: Minimum base price is ₹150"); return; }
+                    setBillError("");
+                    setHistoryPayState("loading");
+                    try {
+                      const res = await fetch(`${BASE_URL}/bookings/${qrBooking.id}/settle`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ final_bill_amount: amount })
+                      });
+                      if (!res.ok) throw new Error("Failed");
+                      setHistoryPayState("success");
+                    } catch (e) {
+                      setBillError("Server error settling booking.");
+                      setHistoryPayState("idle");
+                    }
+                  }} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:"none", background:BRAND.primary, color:"#fff", fontSize:15, fontWeight:700 }}>
+                    Submit Final Invoice
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:16 }}>{t.enterFinalAmount}</p>
+                  <div style={{ background: "#fef2f2", border: "1px solid #fecaca", padding: "12px 16px", borderRadius: 12, marginBottom: 20, textAlign: "left", display: "flex", gap: 12, alignItems: "flex-start" }}>
+                    <div style={{ color: "#dc2626", marginTop: 2 }}><Icons.ShieldAlert /></div>
+                    <p style={{ fontSize: 13, color: "#991b1b", fontWeight: 600, lineHeight: 1.5, margin: 0 }}>
+                      <span style={{ fontWeight: 800 }}>{t.warning}</span> {t.cashWarning}
+                    </p>
+                  </div>
+                  <button onClick={() => { setHistoryPayState("loading"); setTimeout(() => setHistoryPayState("success"), 2000); }} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:`1.5px solid ${BRAND.primary}`, background:BRAND.primaryLight, color:BRAND.primary, fontSize:15, fontWeight:700, marginBottom: 12 }}>
+                    Pay Securely to Activate Warranty
+                  </button>
+                </>
+              )}
 
-              <div style={{ background: BRAND.bg, padding: 16, borderRadius: 16, border: `1.5px solid ${BRAND.border}`, marginBottom: 24, display: "inline-block" }}>
-                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=upi://pay?pa=demo@ybl&pn=Sevamitra%20Demo%20(${encodeURIComponent(qrBooking?.worker_name)})&cu=INR`} alt="Demo Final Payment QR" style={{ width: 140, height: 140, borderRadius: 8 }} />
-              </div>
-
-              <a href={`upi://pay?pa=demo@ybl&pn=Sevamitra%20Demo%20(${encodeURIComponent(qrBooking?.worker_name)})&cu=INR`} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: BRAND.dark, color: "#fff", textDecoration: "none", padding: "16px", borderRadius: 14, fontSize: 15, fontWeight: 700, marginBottom: 12, boxShadow: "0 4px 12px rgba(15, 23, 42, 0.15)" }}>
-                <Icons.Lightning /> {t.payUsingUpi}
-              </a>
-
-              <button onClick={() => { setHistoryPayState("loading"); setTimeout(() => setHistoryPayState("success"), 2000); }} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:`1.5px solid ${BRAND.primary}`, background:BRAND.primaryLight, color:BRAND.primary, fontSize:15, fontWeight:700, marginBottom: 12 }}>{t.iHavePaid}</button>
-              <button onClick={() => { setShowHistoryQR(false); setHistoryPayState("idle"); }} style={{ background:"none", border:"none", color:BRAND.subtle, fontSize:14, fontWeight:600, padding: "8px" }}>{t.close}</button>
+              <button onClick={() => { setShowHistoryQR(false); setHistoryPayState("idle"); setBillError(""); setFinalBill(""); }} style={{ background:"none", border:"none", color:BRAND.subtle, fontSize:14, fontWeight:600, padding: "8px" }}>{t.close}</button>
             </>
           )}
 
           {historyPayState === "loading" && (
             <div className="fade-in" style={{ padding: "60px 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
               <Spinner color={BRAND.primary} />
-              <p style={{ marginTop: 24, fontSize: 16, fontWeight: 700, color: BRAND.dark }}>{t.verifyingWebhook}</p>
-              <p style={{ marginTop: 6, fontSize: 13, color: BRAND.subtle, fontWeight: 500 }}>{t.checkingFinalPayment}</p>
+              <p style={{ marginTop: 24, fontSize: 16, fontWeight: 700, color: BRAND.dark }}>Processing...</p>
             </div>
           )}
 
@@ -1269,7 +1304,9 @@ export default function App() {
               <img src="/logo.png" alt="Sevamitra" style={{ display: "block", margin: "0 auto 16px auto", width: 70, height: 70, borderRadius: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} onError={e => e.target.style.display='none'} />
               <div style={{ color: "#10b981", marginBottom: 16, display: "flex", justifyContent: "center" }}><Icons.CheckCircle /></div>
               <h3 style={{ fontSize:22, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>{t.jobCompleted}</h3>
-              <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:24, lineHeight: 1.5 }}>{t.warrantyActive}</p>
+              <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:24, lineHeight: 1.5 }}>
+                {user.role === "provider" ? "Successfully closed. ₹10 bonus added to your digital wallet!" : t.warrantyActive}
+              </p>
               <button onClick={() => { handleComplete(qrBooking.id); }} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:"none", background:BRAND.primary, color:"#fff", fontSize:15, fontWeight:800, boxShadow: `0 8px 20px ${BRAND.primary}40` }}>{t.done}</button>
             </div>
           )}
