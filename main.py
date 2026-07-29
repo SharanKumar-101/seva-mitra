@@ -27,6 +27,7 @@ client = Client(account_sid, auth_token) if account_sid and auth_token else None
 # --- 2.5 Razorpay Configuration ---
 RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID")
 RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET")
+
 if RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET:
     rzp_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 else:
@@ -48,6 +49,7 @@ def get_db():
 # --- 4. Database Models ---
 class Provider(Base):
     __tablename__ = "providers"
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String)
     category = Column(String)
@@ -60,6 +62,7 @@ class Provider(Base):
 
 class Booking(Base):
     __tablename__ = "bookings"
+
     id = Column(Integer, primary_key=True, index=True)
     customer_name = Column(String)
     customer_phone = Column(String)
@@ -67,9 +70,11 @@ class Booking(Base):
     status = Column(String, default="Confirmed")
     created_at = Column(DateTime, default=datetime.datetime.now)
     cancel_reason = Column(String, nullable=True)
+    final_amount = Column(Integer, nullable=True)
 
 class Review(Base):
     __tablename__ = "reviews"
+
     id = Column(Integer, primary_key=True, index=True)
     provider_id = Column(Integer)
     rating = Column(Integer)
@@ -77,6 +82,7 @@ class Review(Base):
 
 class BookingSession(Base):
     __tablename__ = "booking_sessions"
+
     id = Column(Integer, primary_key=True, index=True)
     customer_phone = Column(String)
     status = Column(String, default="searching")
@@ -84,6 +90,7 @@ class BookingSession(Base):
 
 class Wallet(Base):
     __tablename__ = "wallets"
+
     id = Column(Integer, primary_key=True, index=True)
     phone = Column(String, unique=True)
     balance = Column(Integer, default=0)
@@ -111,6 +118,7 @@ def resolve_photo(p: Provider):
 @app.post("/create-order/")
 def create_order(data: dict):
     amount = data.get("amount")
+
     if amount is None:
         raise HTTPException(status_code=400, detail="Amount is required")
 
@@ -132,6 +140,7 @@ def create_order(data: dict):
             "payment_capture": "1"
         }
         order = rzp_client.order.create(data=order_data)
+
         return {
             "order_id": order["id"],
             "amount": amount,
@@ -144,6 +153,7 @@ def create_order(data: dict):
 def initiate_call(data: dict):
     customer_phone = data.get("customer_phone")
     provider_phone = data.get("provider_phone")
+
     if not customer_phone or not provider_phone:
         raise HTTPException(status_code=400, detail="Missing phone numbers")
 
@@ -158,8 +168,8 @@ def initiate_call(data: dict):
                 )
             )
             return {"msg": "Call initiated", "sid": call.sid}
-        else:
-            return {"msg": "Twilio not configured properly."}
+
+        return {"msg": "Twilio not configured properly."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -167,6 +177,7 @@ def initiate_call(data: dict):
 def get_providers():
     with get_db() as db:
         data = db.query(Provider).all()
+
         return [
             {
                 "id": p.id,
@@ -206,6 +217,7 @@ def create_provider(
                 base_price=base_price
             )
         )
+
     return {"msg": "Provider created"}
 
 @app.put("/providers/{provider_id}")
@@ -273,7 +285,8 @@ def get_bookings():
                 "time": b.created_at.isoformat(),
                 "status": b.status,
                 "cancel_reason": b.cancel_reason,
-                "provider_id": b.provider_id
+                "provider_id": b.provider_id,
+                "final_amount": b.final_amount
             }
             for b, p in results
         ]
@@ -291,25 +304,62 @@ def make_booking(data: dict):
 
     return {"msg": "Booking confirmed"}
 
-@app.post("/bookings/{booking_id}/settle")
-def settle_booking(booking_id: int, data: dict):
+@app.put("/bookings/{booking_id}/accept")
+def accept_booking(booking_id: int):
     with get_db() as db:
         booking = db.query(Booking).filter(Booking.id == booking_id).first()
+
+        if not booking:
+            raise HTTPException(status_code=404, detail="Booking not found")
+
+        booking.status = "Accepted"
+
+    return {"msg": "Job Accepted"}
+
+@app.put("/bookings/{booking_id}/invoice")
+def invoice_booking(booking_id: int, data: dict):
+    amount = data.get("final_amount", 0)
+
+    with get_db() as db:
+        booking = db.query(Booking).filter(Booking.id == booking_id).first()
+
         if not booking:
             raise HTTPException(status_code=404, detail="Booking not found")
 
         provider = db.query(Provider).filter(
             Provider.id == booking.provider_id
         ).first()
+
         if not provider:
             raise HTTPException(status_code=404, detail="Provider not found")
-            
-        min_price = provider.base_price if provider.base_price else 0
-        if data.get("final_bill_amount", 0) < min_price:
+
+        min_price = provider.base_price if provider.base_price else 150
+
+        if amount < min_price:
             raise HTTPException(
                 status_code=400,
                 detail=f"Minimum base price is ₹{min_price}"
             )
+
+        booking.final_amount = amount
+        booking.status = "Payment Pending"
+
+    return {"msg": "Invoice created"}
+
+@app.post("/bookings/{booking_id}/settle")
+def settle_booking(booking_id: int):
+    with get_db() as db:
+        booking = db.query(Booking).filter(Booking.id == booking_id).first()
+
+        if not booking:
+            raise HTTPException(status_code=404, detail="Booking not found")
+
+        provider = db.query(Provider).filter(
+            Provider.id == booking.provider_id
+        ).first()
+
+        if not provider:
+            raise HTTPException(status_code=404, detail="Provider not found")
 
         wallet = db.query(Wallet).filter(
             Wallet.phone == provider.phone
@@ -322,11 +372,7 @@ def settle_booking(booking_id: int, data: dict):
         wallet.balance += 10
         booking.status = "Completed"
 
-    return {
-        "msg": "Booking settled successfully",
-        "provider_bonus": 10,
-        "provider_wallet_balance": wallet.balance
-    }
+    return {"msg": "Settled"}
 
 @app.put("/bookings/{booking_id}/cancel")
 def cancel_booking(booking_id: int, reason_data: dict):
