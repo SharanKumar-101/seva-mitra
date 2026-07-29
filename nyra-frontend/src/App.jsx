@@ -569,6 +569,7 @@ export default function App() {
   const [billError, setBillError] = useState("");
   const [userLatLon,   setUserLatLon]   = useState(null); // GPS State
   const [aadharStatus, setAadharStatus] = useState("Pending"); // "Pending", "Uploading", "Verified"
+  const [hasPaidSession, setHasPaidSession] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("sevamitra_user");
@@ -753,8 +754,8 @@ export default function App() {
     setReviewRating(0);
   };
 
-  const switchTab = (t) => { setTab(t); setScreen("home"); setCallState("idle"); setCallError(""); };
-  const goBack    = (s)  => { setScreen(s); setCallState("idle"); setCallError(""); };
+  const switchTab = (t) => { setTab(t); setScreen("home"); setCallState("idle"); setCallError(""); setHasPaidSession(false); };
+  const goBack    = (s)  => { setScreen(s); setCallState("idle"); setCallError(""); setHasPaidSession(false); };
 
   if (!user) return <LoginScreen onLogin={handleLogin} lang={lang} setLang={setLang} t={t} />;
 
@@ -1048,12 +1049,21 @@ export default function App() {
             </div>
           )}
 
-          {callState === "idle" && (
-            <button onClick={handleCall} className="tap" style={{
+          {callState === "idle" && !hasPaidSession && (
+            <button onClick={() => setShowQR(true)} className="tap" style={{
+              width:"100%", background: BRAND.dark, color:"#fff", border:"none", borderRadius: 14, padding:"16px",
+              fontSize:15, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:10, boxShadow: `0 8px 20px rgba(15,23,42,0.4)`
+            }}>
+              <Icons.Lightning/> Pay ₹40 to Unlock Session
+            </button>
+          )}
+
+          {callState === "idle" && hasPaidSession && (
+            <button onClick={handleCall} className="tap fade-in" style={{
               width:"100%", background: BRAND.primary, color:"#fff", border:"none", borderRadius: 14, padding:"16px",
               fontSize:15, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:10, boxShadow: `0 8px 20px ${BRAND.primary}40`
             }}>
-              <Icons.Phone /> {t.secureCall}
+              <Icons.Phone/> {t.secureCall}
             </button>
           )}
 
@@ -1069,13 +1079,13 @@ export default function App() {
           {callState === "called" && (
             <div className="fade-in" style={{ display:"flex", flexDirection:"column", gap:12 }}>
               <div style={{ background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius: 12, padding:"16px", fontSize:14, color:"#166534", fontWeight:600, display:"flex", alignItems:"center", gap:10 }}>
-                <Icons.CheckCircle /> {t.connectedConfirm}
+                <Icons.CheckCircle/> Did the expert accept the job?
               </div>
-              <button onClick={() => setShowQR(true)} className="tap" style={{ width:"100%", background: BRAND.primary, color:"#fff", border:"none", borderRadius: 14, padding:"16px", fontSize:15, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:10, boxShadow: `0 8px 20px ${BRAND.primary}40` }}>
-                {t.confirmToBook}
+              <button onClick={handleBook} className="tap" style={{ width:"100%", background: BRAND.primary, color:"#fff", border:"none", borderRadius: 14, padding:"16px", fontSize:15, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:10, boxShadow: `0 8px 20px ${BRAND.primary}40` }}>
+                Yes, Confirm & Lock Booking
               </button>
-              <button onClick={handleCall} className="tap" style={{ background:"none", border:`1px solid ${BRAND.border}`, color:BRAND.subtle, borderRadius: 14, padding:"14px", fontSize:14, fontWeight:600 }}>
-                {t.callAgain}
+              <button onClick={() => { setCallState("idle"); setCallError(""); }} className="tap" style={{ background:"none", border:`1px solid ${BRAND.border}`, color:BRAND.subtle, borderRadius: 14, padding:"14px", fontSize:14, fontWeight:600 }}>
+                No, Call Another Expert
               </button>
             </div>
           )}
@@ -1119,10 +1129,10 @@ export default function App() {
               {payState === "success" && (
                 <div className="fade-up" style={{ padding: "40px 0 20px" }}>
                   <img src="/logo.png" alt="Sevamitra" style={{ display: "block", margin: "0 auto 16px auto", width: 70, height: 70, borderRadius: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} onError={e => e.target.style.display='none'} />
-                  <div style={{ color: "#10b981", marginBottom: 16, display: "flex", justifyContent: "center" }}><Icons.CheckCircle /></div>
-                  <h3 style={{ fontSize:22, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>{t.bookingConfirmed}</h3>
-                  <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:24, lineHeight: 1.5 }}>{t.expertSecuredNote}</p>
-                  <button onClick={() => { setShowQR(false); setPayState("idle"); handleBook(); }} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:"none", background:BRAND.primary, color:"#fff", fontSize:15, fontWeight:800, boxShadow: `0 8px 20px ${BRAND.primary}40` }}>{t.completeBooking}</button>
+                  <div style={{ color: "#10b981", marginBottom: 16, display: "flex", justifyContent: "center" }}><Icons.CheckCircle/></div>
+                  <h3 style={{ fontSize:22, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Session Unlocked!</h3>
+                  <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:24, lineHeight: 1.5 }}>You can now securely call the expert to negotiate the job.</p>
+                  <button onClick={() => { setShowQR(false); setPayState("idle"); setHasPaidSession(true); }} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:"none", background:BRAND.primary, color:"#fff", fontSize:15, fontWeight:800, boxShadow: `0 8px 20px ${BRAND.primary}40` }}>Continue to Call</button>
                 </div>
               )}
             </div>
@@ -1232,7 +1242,11 @@ export default function App() {
     {showHistoryQR && (
       <div className="fade-in" style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.7)", backdropFilter:"blur(8px)", zIndex:100, display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
         <div className="slide-up" style={{ background:"#fff", borderRadius:"24px 24px 0 0", padding:"24px 24px 40px", width:"100%", maxWidth:430, textAlign: "center", boxShadow: "0 -10px 40px rgba(0,0,0,0.15)" }}>
-          {historyPayState === "idle" && (
+          {historyPayState === "idle" && (() => {
+            const assignedProv = providers.find(p => p.id === qrBooking?.provider_id);
+            const minPrice = assignedProv ? assignedProv.base_price : 150;
+
+            return (
             <>
               <div style={{ width:40, height:5, background:"#cbd5e1", borderRadius:4, margin:"0 auto 24px" }} />
               <h3 style={{ fontSize:20, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>
@@ -1242,19 +1256,19 @@ export default function App() {
               {user.role === "provider" ? (
                 <div style={{ textAlign: "left", marginBottom: 24 }}>
                   <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:16 }}>
-                    Enter the final negotiated bill amount. Minimum base price is ₹150. You will receive a ₹10 bonus in your wallet upon completion.
+                    Enter the final negotiated bill amount. Minimum base price is ₹{minPrice}. You will receive a ₹10 bonus in your wallet upon completion.
                   </p>
                   {billError && <div style={{ color: "#dc2626", fontSize: 13, fontWeight: 600, marginBottom: 12, background: "#fef2f2", padding: "8px", borderRadius: "8px", border: "1px solid #fecaca" }}>{billError}</div>}
                   <input
                     type="number"
-                    placeholder="Enter amount (e.g., 200)"
+                    placeholder={`Enter amount (e.g., ${minPrice + 50})`}
                     value={finalBill}
                     onChange={(e) => setFinalBill(e.target.value)}
                     style={{ width: "100%", padding: "16px", borderRadius: 12, border: `1px solid ${BRAND.border}`, fontSize: 16, outline: "none", marginBottom: 16, fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: "700" }}
                   />
                   <button onClick={async () => {
                     const amount = parseInt(finalBill, 10);
-                    if (!amount || amount < 150) { setBillError("Error: Minimum base price is ₹150"); return; }
+                    if (!amount || amount < minPrice) { setBillError(`Error: Minimum base price is ₹${minPrice}`); return; }
                     setBillError("");
                     setHistoryPayState("loading");
                     try {
@@ -1290,7 +1304,8 @@ export default function App() {
 
               <button onClick={() => { setShowHistoryQR(false); setHistoryPayState("idle"); setBillError(""); setFinalBill(""); }} style={{ background:"none", border:"none", color:BRAND.subtle, fontSize:14, fontWeight:600, padding: "8px" }}>{t.close}</button>
             </>
-          )}
+            );
+          })()}
 
           {historyPayState === "loading" && (
             <div className="fade-in" style={{ padding: "60px 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
