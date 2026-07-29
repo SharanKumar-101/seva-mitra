@@ -915,6 +915,43 @@ export default function App() {
           ))}
           <button onClick={() => { localStorage.removeItem("sevamitra_session"); localStorage.clear(); window.location.reload(); }} className="tap" style={{ width:"100%", padding:"16px", borderRadius: 16, border:"none", background:"#fef2f2", color:"#dc2626", fontWeight:700, marginTop: 24, border: "1px solid #fecaca" }}>{t.logOut}</button>
         </div>
+
+        {invoiceModalBooking && (
+          <div className="fade-in" style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.7)", backdropFilter:"blur(8px)", zIndex:100, display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
+            <div className="slide-up" style={{ background:"#fff", borderRadius:"24px 24px 0 0", padding:"24px 24px 40px", width:"100%", maxWidth:430, textAlign:"center", boxShadow:"0 -10px 40px rgba(0,0,0,0.15)" }}>
+              <div style={{ width:40, height:5, background:"#cbd5e1", borderRadius:4, margin:"0 auto 24px" }} />
+              <h3 style={{ fontSize:20, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Send Final Invoice</h3>
+              <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:16 }}>Enter the final amount. The customer will pay this securely via Razorpay.</p>
+              {billError && <div style={{ color:"#dc2626", fontSize:13, fontWeight:600, marginBottom:12, background:"#fef2f2", padding:"8px", borderRadius:"8px", border:"1px solid #fecaca" }}>{billError}</div>}
+              <input type="number" placeholder="Final Amount" value={finalBill} onChange={(e) => setFinalBill(e.target.value)} style={{ width:"100%", padding:"16px", borderRadius:12, border:`1px solid ${BRAND.border}`, fontSize:16, outline:"none", marginBottom:16, fontFamily:"'Plus Jakarta Sans', sans-serif", fontWeight:"700" }} />
+              <button onClick={async () => {
+                const amount = parseInt(finalBill, 10);
+                const assignedProv = providers.find(p => p.id === invoiceModalBooking.provider_id);
+                const minPrice = assignedProv ? assignedProv.base_price : 150;
+
+                if (!amount || amount < minPrice) {
+                  setBillError(`Minimum bill is ₹${minPrice}`);
+                  return;
+                }
+
+                setBillError("");
+                try {
+                  const response = await fetch(`${BASE_URL}/bookings/${invoiceModalBooking.id}/invoice`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ final_amount: amount })
+                  });
+                  if (!response.ok) throw new Error("Invoice failed");
+                  await fetchData();
+                  setInvoiceModalBooking(null);
+                } catch (e) {
+                  setBillError("Server error.");
+                }
+              }} className="tap" style={{ width:"100%", padding:"16px", borderRadius:14, border:"none", background:BRAND.primary, color:"#fff", fontSize:15, fontWeight:700 }}>Send to Customer</button>
+              <button onClick={() => setInvoiceModalBooking(null)} style={{ background:"none", border:"none", color:BRAND.subtle, fontSize:14, fontWeight:600, padding:"12px", marginTop:8 }}>Cancel</button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1320,141 +1357,6 @@ export default function App() {
             <button onClick={() => { setShowCancel(false); setCancelReason(""); }} className="tap" style={{ flex:1, padding:"16px", borderRadius: 12, border:`1px solid ${BRAND.border}`, background:"#fff", color:BRAND.dark, fontSize:15, fontWeight:700 }}>{t.back}</button>
             <button onClick={handleCancel} disabled={!cancelReason} className="tap" style={{ flex:1, padding:"16px", borderRadius: 12, border:"none", background: cancelReason ? "#dc2626" : "#fca5a5", color:"#fff", fontSize:15, fontWeight:700 }}>{t.confirm}</button>
           </div>
-        </div>
-      </div>
-    )}
-
-    {invoiceModalBooking && (
-      <div className="fade-in" style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.7)", backdropFilter:"blur(8px)", zIndex:100, display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
-        <div className="slide-up" style={{ background:"#fff", borderRadius:"24px 24px 0 0", padding:"24px 24px 40px", width:"100%", maxWidth:430, textAlign: "center", boxShadow: "0 -10px 40px rgba(0,0,0,0.15)" }}>
-          <div style={{ width:40, height:5, background:"#cbd5e1", borderRadius:4, margin:"0 auto 24px" }} />
-          <h3 style={{ fontSize:20, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Send Final Invoice</h3>
-          <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:16 }}>Enter the final amount. The customer will pay this securely via Razorpay.</p>
-          {billError && <div style={{ color: "#dc2626", fontSize: 13, fontWeight: 600, marginBottom: 12, background: "#fef2f2", padding: "8px", borderRadius: "8px", border: "1px solid #fecaca" }}>{billError}</div>}
-          <input type="number" placeholder="Final Amount" value={finalBill} onChange={(e) => setFinalBill(e.target.value)} style={{ width: "100%", padding: "16px", borderRadius: 12, border: `1px solid ${BRAND.border}`, fontSize: 16, outline: "none", marginBottom: 16, fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: "700" }} />
-          <button onClick={async () => {
-            const amount = parseInt(finalBill, 10);
-            const assignedProv = providers.find(p => p.id === invoiceModalBooking.provider_id);
-            const minPrice = assignedProv ? assignedProv.base_price : 150;
-            if (!amount || amount < minPrice) { setBillError(`Minimum bill is ₹${minPrice}`); return; }
-            setBillError("");
-            try {
-              const response = await fetch(`${BASE_URL}/bookings/${invoiceModalBooking.id}/invoice`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ final_amount: amount }) });
-              if (!response.ok) throw new Error("Invoice failed");
-              fetchData();
-              setInvoiceModalBooking(null);
-            } catch (e) { setBillError("Server error."); }
-          }} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:"none", background:BRAND.primary, color:"#fff", fontSize:15, fontWeight:700 }}>Send to Customer</button>
-          <button onClick={() => setInvoiceModalBooking(null)} style={{ background:"none", border:"none", color:BRAND.subtle, fontSize:14, fontWeight:600, padding: "12px", marginTop: 8 }}>Cancel</button>
-        </div>
-      </div>
-    )}
-
-  {/* Legacy final-completion modal retained but disabled; invoices now drive settlement. */}
-    {false && showHistoryQR && (
-      <div className="fade-in" style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.7)", backdropFilter:"blur(8px)", zIndex:100, display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
-        <div className="slide-up" style={{ background:"#fff", borderRadius:"24px 24px 0 0", padding:"24px 24px 40px", width:"100%", maxWidth:430, textAlign: "center", boxShadow: "0 -10px 40px rgba(0,0,0,0.15)" }}>
-          {historyPayState === "idle" && (() => {
-            const assignedProv = providers.find(p => p.id === qrBooking?.provider_id);
-            const minPrice = assignedProv ? assignedProv.base_price : 150;
-
-            return (
-            <>
-              <div style={{ width:40, height:5, background:"#cbd5e1", borderRadius:4, margin:"0 auto 24px" }} />
-              <h3 style={{ fontSize:20, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>
-                {user.role === "provider" ? "Settle Job & Claim Bonus" : t.completeAndSettle}
-              </h3>
-
-              {user.role === "provider" ? (
-                <div style={{ textAlign: "left", marginBottom: 24 }}>
-                  <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:16 }}>
-                    Enter the final negotiated bill amount. Minimum base price is ₹{minPrice}. You will receive a ₹10 bonus in your wallet upon completion.
-                  </p>
-                  {billError && <div style={{ color: "#dc2626", fontSize: 13, fontWeight: 600, marginBottom: 12, background: "#fef2f2", padding: "8px", borderRadius: "8px", border: "1px solid #fecaca" }}>{billError}</div>}
-                  <input
-                    type="number"
-                    placeholder={`Enter amount (e.g., ${minPrice + 50})`}
-                    value={finalBill}
-                    onChange={(e) => setFinalBill(e.target.value)}
-                    style={{ width: "100%", padding: "16px", borderRadius: 12, border: `1px solid ${BRAND.border}`, fontSize: 16, outline: "none", marginBottom: 16, fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: "700" }}
-                  />
-                  <button onClick={async () => {
-                    const amount = parseInt(finalBill, 10);
-                    if (!amount || amount < minPrice) { setBillError(`Error: Minimum base price is ₹${minPrice}`); return; }
-                    setBillError("");
-                    setHistoryPayState("loading");
-                    try {
-                      const res = await fetch(`${BASE_URL}/bookings/${qrBooking.id}/settle`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ final_bill_amount: amount })
-                      });
-                      if (!res.ok) throw new Error("Failed");
-                      setHistoryPayState("success");
-                    } catch (e) {
-                      setBillError("Server error settling booking.");
-                      setHistoryPayState("idle");
-                    }
-                  }} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:"none", background:BRAND.primary, color:"#fff", fontSize:15, fontWeight:700 }}>
-                    Submit Final Invoice
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:16 }}>{t.enterFinalAmount}</p>
-                  <div style={{ background: "#fef2f2", border: "1px solid #fecaca", padding: "12px 16px", borderRadius: 12, marginBottom: 20, textAlign: "left", display: "flex", gap: 12, alignItems: "flex-start" }}>
-                    <div style={{ color: "#dc2626", marginTop: 2 }}><Icons.ShieldAlert /></div>
-                    <p style={{ fontSize: 13, color: "#991b1b", fontWeight: 600, lineHeight: 1.5, margin: 0 }}>
-                      <span style={{ fontWeight: 800 }}>{t.warning}</span> {t.cashWarning}
-                    </p>
-                  </div>
-                  <button onClick={() => { setHistoryPayState("loading"); setTimeout(() => setHistoryPayState("success"), 2000); }} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:`1.5px solid ${BRAND.primary}`, background:BRAND.primaryLight, color:BRAND.primary, fontSize:15, fontWeight:700, marginBottom: 12 }}>
-                    Pay Securely to Activate Warranty
-                  </button>
-                </>
-              )}
-
-              <button onClick={() => { setShowHistoryQR(false); setHistoryPayState("idle"); setBillError(""); setFinalBill(""); }} style={{ background:"none", border:"none", color:BRAND.subtle, fontSize:14, fontWeight:600, padding: "8px" }}>{t.close}</button>
-            </>
-            );
-          })()}
-
-          {historyPayState === "loading" && (
-            <div className="fade-in" style={{ padding: "60px 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <Spinner color={BRAND.primary} />
-              <p style={{ marginTop: 24, fontSize: 16, fontWeight: 700, color: BRAND.dark }}>Processing...</p>
-            </div>
-          )}
-
-          {historyPayState === "success" && (
-            <div className="fade-up" style={{ padding: "40px 0 20px" }}>
-              <img src="/logo.png" alt="Sevamitra" style={{ display: "block", margin: "0 auto 16px auto", width: 70, height: 70, borderRadius: 16, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} onError={e => e.target.style.display='none'} />
-              <div style={{ color: "#10b981", marginBottom: 16, display: "flex", justifyContent: "center" }}><Icons.CheckCircle /></div>
-              <h3 style={{ fontSize:22, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>{t.jobCompleted}</h3>
-              <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:24, lineHeight: 1.5 }}>
-                {user.role === "provider" ? "Successfully closed. ₹10 bonus added to your digital wallet!" : t.warrantyActive}
-              </p>
-              <button onClick={() => { handleComplete(qrBooking.id); }} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:"none", background:BRAND.primary, color:"#fff", fontSize:15, fontWeight:800, boxShadow: `0 8px 20px ${BRAND.primary}40` }}>{t.done}</button>
-            </div>
-          )}
-        </div>
-      </div>
-    )}
-
-    {/* NEW: RATING & REVIEW MODAL */}
-    {showReview && (
-      <div className="fade-in" style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.8)", zIndex:200, display:"flex", alignItems:"center", justifyContent:"center", padding: 20 }}>
-        <div className="slide-up" style={{ background:"#fff", borderRadius: 24, padding: 32, width:"100%", maxWidth:430, textAlign:"center", boxShadow:"0 20px 40px rgba(0,0,0,0.2)" }}>
-          <h3 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8, color: BRAND.dark }}>{t.rateService}</h3>
-          <p style={{ color: BRAND.subtle, marginBottom: 24, fontWeight: 500 }}>{t.rateExperience.replace("{name}", qrBooking?.worker_name || "")}</p>
-          
-          <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 32 }}>
-            {[1, 2, 3, 4, 5].map(star => (
-              <button key={star} onClick={() => setReviewRating(star)} style={{ background: "none", border: "none", fontSize: 44, cursor: "pointer", color: reviewRating >= star ? "#fbbf24" : "#e2e8f0", transition: "all 0.2s", transform: reviewRating === star ? "scale(1.1)" : "scale(1)" }}>★</button>
-            ))}
-          </div>
-
-          <button onClick={submitReview} disabled={!reviewRating} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:"none", background: reviewRating ? BRAND.primary : BRAND.border, color: reviewRating ? "#fff" : BRAND.subtle, fontWeight: 800, transition:"all 0.3s" }}>{t.submitFeedback}</button>
         </div>
       </div>
     )}
