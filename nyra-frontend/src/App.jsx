@@ -299,6 +299,7 @@ function statusLabel(status, t) {
     Completed: t.statusCompleted,
     Pending: t.statusPending,
     Cancelled: t.statusCancelled,
+    Accepted: "Accepted",
   };
   return map[status] || status;
 }
@@ -569,7 +570,8 @@ export default function App() {
   const [billError, setBillError] = useState("");
   const [userLatLon,   setUserLatLon]   = useState(null); // GPS State
   const [aadharStatus, setAadharStatus] = useState("Pending"); // "Pending", "Uploading", "Verified"
-  const [hasPaidSession, setHasPaidSession] = useState(false);
+  const [hasPaidSession, setHasPaidSession] = useState(() => localStorage.getItem("sevamitra_session") === "true");
+  const [showTerms, setShowTerms] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("sevamitra_user");
@@ -602,6 +604,8 @@ export default function App() {
 
   const handleLogin = (u) => {
     setUser(u);
+    localStorage.removeItem("sevamitra_session");
+    setHasPaidSession(false);
     localStorage.setItem("sevamitra_user", JSON.stringify(u));
   };
 
@@ -704,7 +708,56 @@ export default function App() {
     }
   };
 
+  const startFinalRazorpayPayment = async () => {
+    setHistoryPayState("loading");
+    const isLoaded = await loadRazorpay();
+    if (!isLoaded) {
+      alert(t.paymentGatewayFailed);
+      setHistoryPayState("idle");
+      return;
+    }
+
+    try {
+      const assignedProv = providers.find(p => p.id === qrBooking?.provider_id);
+      const minPrice = assignedProv ? assignedProv.base_price : 150;
+
+      const res = await fetch(`${BASE_URL}/create-order/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: minPrice })
+      });
+      const orderData = await res.json();
+
+      const options = {
+        key: "rzp_test_SsIEmLJ538aqEl",
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "Sevamitra Final Settlement",
+        description: `Payment to ${qrBooking?.worker_name}`,
+        order_id: orderData.order_id,
+        handler: function () {
+          setHistoryPayState("success");
+        },
+        prefill: { name: user.name, contact: user.phone },
+        theme: { color: "#10b981" }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", function () {
+        alert(t.paymentFailed);
+        setHistoryPayState("idle");
+      });
+      rzp.open();
+    } catch (error) {
+      console.error(error);
+      alert(t.paymentInitFailed);
+      setHistoryPayState("idle");
+    }
+  };
+
   const handleBook = async () => {
+    localStorage.removeItem("sevamitra_session");
+    setHasPaidSession(false);
     setCallState("booking");
     const newBooking = { id: Date.now(), customer_phone: user.phone, worker_name: selProv.name, category: selProv.category, status: "Confirmed", time: new Date().toISOString() };
     setBookings(prev => [newBooking, ...prev]);
@@ -830,9 +883,18 @@ export default function App() {
               <div style={{ display: "flex", alignItems: "center", gap: 8, color: BRAND.subtle, fontSize: 13, fontWeight: 600 }}>
                 <Icons.Phone /> {b.customer_phone}
               </div>
+              {b.status === "Confirmed" && (
+                <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+                  <button onClick={() => setBookings(prev => prev.map(job => job.id === b.id ? { ...job, status: "Accepted" } : job))} className="tap" style={{ flex: 1, padding: "10px", background: "#10b981", color: "#fff", borderRadius: 10, border: "none", fontWeight: 700 }}>Accept Job</button>
+                  <button onClick={async () => {
+                    await fetch(`${BASE_URL}/bookings/${b.id}/cancel`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason: "Provider unavailable" }) });
+                    setBookings(prev => prev.map(job => job.id === b.id ? { ...job, status: "Cancelled" } : job));
+                  }} className="tap" style={{ flex: 1, padding: "10px", background: "#ef4444", color: "#fff", borderRadius: 10, border: "none", fontWeight: 700 }}>Decline</button>
+                </div>
+              )}
             </div>
           ))}
-          <button onClick={() => { localStorage.clear(); window.location.reload(); }} className="tap" style={{ width:"100%", padding:"16px", borderRadius: 16, border:"none", background:"#fef2f2", color:"#dc2626", fontWeight:700, marginTop: 24, border: "1px solid #fecaca" }}>{t.logOut}</button>
+          <button onClick={() => { localStorage.removeItem("sevamitra_session"); localStorage.clear(); window.location.reload(); }} className="tap" style={{ width:"100%", padding:"16px", borderRadius: 16, border:"none", background:"#fef2f2", color:"#dc2626", fontWeight:700, marginTop: 24, border: "1px solid #fecaca" }}>{t.logOut}</button>
         </div>
       </div>
     );
@@ -1132,7 +1194,7 @@ export default function App() {
                   <div style={{ color: "#10b981", marginBottom: 16, display: "flex", justifyContent: "center" }}><Icons.CheckCircle/></div>
                   <h3 style={{ fontSize:22, fontWeight:800, color:BRAND.dark, marginBottom:8 }}>Session Unlocked!</h3>
                   <p style={{ fontSize:14, color:BRAND.subtle, fontWeight:500, marginBottom:24, lineHeight: 1.5 }}>You can now securely call the expert to negotiate the job.</p>
-                  <button onClick={() => { setShowQR(false); setPayState("idle"); setHasPaidSession(true); }} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:"none", background:BRAND.primary, color:"#fff", fontSize:15, fontWeight:800, boxShadow: `0 8px 20px ${BRAND.primary}40` }}>Continue to Call</button>
+                  <button onClick={() => { setShowQR(false); setPayState("idle"); setHasPaidSession(true); localStorage.setItem("sevamitra_session", "true"); }} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:"none", background:BRAND.primary, color:"#fff", fontSize:15, fontWeight:800, boxShadow: `0 8px 20px ${BRAND.primary}40` }}>Continue to Call</button>
                 </div>
               )}
             </div>
@@ -1296,7 +1358,7 @@ export default function App() {
                       <span style={{ fontWeight: 800 }}>{t.warning}</span> {t.cashWarning}
                     </p>
                   </div>
-                  <button onClick={() => { setHistoryPayState("loading"); setTimeout(() => setHistoryPayState("success"), 2000); }} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:`1.5px solid ${BRAND.primary}`, background:BRAND.primaryLight, color:BRAND.primary, fontSize:15, fontWeight:700, marginBottom: 12 }}>
+                  <button onClick={startFinalRazorpayPayment} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:`1.5px solid ${BRAND.primary}`, background:BRAND.primaryLight, color:BRAND.primary, fontSize:15, fontWeight:700, marginBottom: 12 }}>
                     Pay Securely to Activate Warranty
                   </button>
                 </>
@@ -1366,23 +1428,49 @@ export default function App() {
     </div>
 
     <div style={{ flex:1, overflowY:"auto", padding:"32px 20px 100px" }}>
+      <div className="fade-up" style={{ background: "#fff", borderRadius: 16, border: `1px solid ${BRAND.border}`, padding: 20, marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+        <div>
+          <h3 style={{ fontSize: 16, fontWeight: 800, color: BRAND.dark, marginBottom: 4 }}>My Wallet</h3>
+          <p style={{ fontSize: 12, color: BRAND.subtle, fontWeight: 600 }}>
+            {user.role === "provider" ? "Bonus unlocks after job completion" : "Secured booking credits"}
+          </p>
+        </div>
+        <div style={{ fontSize: 24, fontWeight: 800, color: BRAND.primary }}>
+          {user.role === "user" ? (hasPaidSession ? "₹40" : "₹0") : "₹0"}
+        </div>
+      </div>
+
       <div style={{ background:"#fff", borderRadius: 16, border:`1px solid ${BRAND.border}`, overflow:"hidden", marginBottom: 24, boxShadow:"0 2px 8px rgba(0,0,0,0.02)" }}>
         {[
           { label: t.helpSupport },
           { label: t.termsOfService },
           { label: t.aboutSevamitra },
         ].map((item, i, arr) => (
-          <button key={item.label} className="tap" style={{ width:"100%", padding:"20px 24px", background:"none", border:"none", borderBottom:i<arr.length-1?`1px solid ${BRAND.border}`:"none", display:"flex", justifyContent:"space-between", alignItems:"center", color:BRAND.dark, fontSize: 15, fontWeight: 600 }}>
+          <button key={item.label} onClick={() => item.label === t.termsOfService ? setShowTerms(true) : null} className="tap" style={{ width:"100%", padding:"20px 24px", background:"none", border:"none", borderBottom:i<arr.length-1?`1px solid ${BRAND.border}`:"none", display:"flex", justifyContent:"space-between", alignItems:"center", color:BRAND.dark, fontSize: 15, fontWeight: 600 }}>
             {item.label}
             <span style={{ color:"#94a3b8" }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg></span>
           </button>
         ))}
       </div>
 
-      <button onClick={() => { localStorage.clear(); window.location.reload(); }} className="tap" style={{ width:"100%", padding:"18px", borderRadius: 16, background:"#fef2f2", border:"1.5px solid #fecaca", color:"#dc2626", fontSize:15, fontWeight:700 }}>
+      <button onClick={() => { localStorage.removeItem("sevamitra_session"); localStorage.clear(); window.location.reload(); }} className="tap" style={{ width:"100%", padding:"18px", borderRadius: 16, background:"#fef2f2", border:"1.5px solid #fecaca", color:"#dc2626", fontSize:15, fontWeight:700 }}>
         {t.logOut}
       </button>
     </div>
+
+    {showTerms && (
+      <div className="fade-in" style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.6)", backdropFilter:"blur(6px)", zIndex:200, display:"flex", alignItems:"center", justifyContent:"center", padding: 20 }}>
+        <div className="slide-up" style={{ background:"#fff", borderRadius: 24, padding: 32, width:"100%", maxWidth:430, boxShadow:"0 20px 40px rgba(0,0,0,0.2)" }}>
+          <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 16, color: BRAND.dark }}>Terms of Service</h3>
+          <ul style={{ paddingLeft: 20, color: BRAND.subtle, fontSize: 14, fontWeight: 500, lineHeight: 1.6, marginBottom: 24 }}>
+            <li style={{ marginBottom: 10 }}>The ₹40 matching fee is held securely in your wallet until a provider accepts.</li>
+            <li style={{ marginBottom: 10 }}>The 7-Day Recast Warranty is strictly valid ONLY for digital payments made through the app.</li>
+            <li>Cash payments instantly void all platform protections and warranties.</li>
+          </ul>
+          <button onClick={() => setShowTerms(false)} className="tap" style={{ width: "100%", padding:"16px", borderRadius: 14, border:"none", background:BRAND.primary, color:"#fff", fontWeight: 800 }}>I Understand</button>
+        </div>
+      </div>
+    )}
   </>);
 
   return null;
